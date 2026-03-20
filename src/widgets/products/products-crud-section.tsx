@@ -74,7 +74,7 @@ export function ProductsCrudSection() {
   const handleDelete = useCallback(async (row: Product) => {
     try {
       await deleteProductAsync(row.id);
-      toast.success("Product deleted");
+      toast.success("Препарат удален");
     } catch {
       // Error toast is shown in mutation onError.
     }
@@ -167,7 +167,7 @@ export function ProductsCrudSection() {
             <Button
               variant="ghost"
               size="icon"
-              aria-label="Edit product"
+              aria-label="Редактировать препарат"
               onClick={(e) => {
                 e.stopPropagation();
                 openEdit(row.id);
@@ -181,17 +181,17 @@ export function ProductsCrudSection() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  aria-label="Delete product"
+                  aria-label="Удалить препарат"
                   onClick={(e) => e.stopPropagation()}
                   disabled={isDeletingProduct}
                 >
                   <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
               }
-              title="Delete product?"
-              description={`Product "${row.name}" will be permanently deleted.`}
-              confirmLabel="Delete"
-              cancelLabel="Cancel"
+              title="Удалить препарат?"
+              description={`Препарат "${row.name}" будет удален.`}
+              confirmLabel="Удалить"
+              cancelLabel="Отмена"
               confirmVariant="destructive"
               isConfirming={isDeletingProduct}
               onConfirm={() => handleDelete(row)}

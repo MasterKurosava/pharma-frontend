@@ -52,7 +52,7 @@ export function ClientsCrudSection() {
   const handleDelete = useCallback(async (row: Client) => {
     try {
       await deleteClientAsync(row.id);
-      toast.success("Client deleted");
+      toast.success("Клиент удален");
     } catch {
       // Error toast is shown in mutation onError.
     }
@@ -89,7 +89,7 @@ export function ClientsCrudSection() {
             <Button
               variant="ghost"
               size="icon"
-              aria-label="Edit client"
+              aria-label="Редактировать клиента"
               onClick={(e) => {
                 e.stopPropagation();
                 setModalMode("edit");
@@ -105,17 +105,17 @@ export function ClientsCrudSection() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  aria-label="Delete client"
+                  aria-label="Удалить клиента"
                   onClick={(e) => e.stopPropagation()}
                   disabled={isDeletingClient}
                 >
                   <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
               }
-              title="Delete client?"
-              description={`Client "${row.name}" will be permanently deleted.`}
-              confirmLabel="Delete"
-              cancelLabel="Cancel"
+              title="Удалить клиента?"
+              description={`Клиент "${row.name}" будет удален.`}
+              confirmLabel="Удалить"
+              cancelLabel="Отмена"
               confirmVariant="destructive"
               isConfirming={isDeletingClient}
               onConfirm={() => handleDelete(row)}

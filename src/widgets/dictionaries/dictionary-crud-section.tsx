@@ -38,7 +38,7 @@ export function DictionaryCrudSection({ resource }: DictionaryCrudSectionProps) 
   const handleDelete = useCallback(async (row: DictionaryItem) => {
     try {
       await deleteDictionaryAsync(row.id);
-      toast.success("Item deleted");
+      toast.success("Элемент удален");
     } catch {
       // Error toast is shown in mutation onError.
     }
@@ -90,7 +90,7 @@ export function DictionaryCrudSection({ resource }: DictionaryCrudSectionProps) 
                 setSelectedItem(row);
                 setModalOpen(true);
               }}
-              aria-label="Edit item"
+              aria-label="Редактировать элемент"
             >
               <Pencil className={cn("h-4 w-4")} />
             </Button>
@@ -100,17 +100,17 @@ export function DictionaryCrudSection({ resource }: DictionaryCrudSectionProps) 
                 <Button
                   variant="ghost"
                   size="icon"
-                  aria-label="Delete item"
+                  aria-label="Удалить элемент"
                   onClick={(e) => e.stopPropagation()}
                   disabled={isDeletingDictionary}
                 >
                   <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
               }
-              title={`Delete ${config.singularLabel.toLowerCase()}?`}
-              description={`Item "${row.name || row.label}" will be permanently deleted.`}
-              confirmLabel="Delete"
-              cancelLabel="Cancel"
+              title={`Удалить ${config.singularLabel.toLowerCase()}?`}
+              description={`Элемент "${row.name || row.label}" будет удален.`}
+              confirmLabel="Удалить"
+              cancelLabel="Отмена"
               confirmVariant="destructive"
               isConfirming={isDeletingDictionary}
               onConfirm={() => handleDelete(row)}

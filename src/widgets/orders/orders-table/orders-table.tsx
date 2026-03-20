@@ -59,7 +59,7 @@ export function OrdersTable({
   const handleDelete = async (order: Order) => {
     try {
       await deleteMutation.mutateAsync(order.id);
-      toast.success(`Order #${order.id} deleted`);
+      toast.success(`Заказ #${order.id} удален`);
     } catch {
       // Error toast is shown in mutation onError.
     }
@@ -187,7 +187,7 @@ export function OrdersTable({
               e.stopPropagation();
               onRowClick(row);
             }}
-            aria-label="Open preview"
+            aria-label="Редактировать заказ"
           >
             <Pencil className="h-4 w-4" />
           </Button>
@@ -197,17 +197,17 @@ export function OrdersTable({
               <Button
                 size="icon"
                 variant="ghost"
-                aria-label="Delete order"
+                aria-label="Удалить заказ"
                 onClick={(e) => e.stopPropagation()}
                 disabled={deleteMutation.isPending}
               >
                 <Trash2 className="h-4 w-4 text-destructive" />
               </Button>
             }
-            title="Delete order?"
-            description={`Order #${row.id} will be permanently deleted.`}
-            confirmLabel="Delete"
-            cancelLabel="Cancel"
+            title="Удалить заказ?"
+            description={`Заказ #${row.id} будет удален.`}
+            confirmLabel="Удалить"
+            cancelLabel="Отмена"
             confirmVariant="destructive"
             isConfirming={deleteMutation.isPending}
             onConfirm={() => handleDelete(row)}
