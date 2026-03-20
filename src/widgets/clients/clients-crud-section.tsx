@@ -85,7 +85,7 @@ export function ClientsCrudSection() {
         width: 112,
         align: "right",
         cell: (row) => (
-          <div className="flex justify-end gap-1">
+          <div data-row-action="true" className="flex justify-end gap-1">
             <Button
               variant="ghost"
               size="icon"
@@ -171,11 +171,6 @@ export function ClientsCrudSection() {
           emptyTitle="Нет клиентов найдено"
           emptyDescription="Try adjusting search or client status filter."
           rowKey={(row) => row.id}
-          onRowClick={(row) => {
-            setModalMode("edit");
-            setSelectedClientId(row.id);
-            setModalOpen(true);
-          }}
         />
       </div>
 

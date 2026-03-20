@@ -43,7 +43,7 @@ export function ProductsCrudSection() {
     { params: { isActive: true, search: undefined } },
   );
   const { options: productStatusOptions, isPending: isProductStatusesPending } = useDictionaryOptionsQuery("product-statuses", {
-    params: { isActive: true, search: undefined },
+    params: { search: undefined },
   });
   const { options: productOrderSourceOptions, isPending: isProductOrderSourcesPending } = useDictionaryOptionsQuery(
     "product-order-sources",
@@ -112,9 +112,9 @@ export function ProductsCrudSection() {
       {
         id: "productStatusId",
         header: "Статус",
-        cell: (row) => <StatusBadge label={productStatusById.get(row.productStatusId) ?? "—"} tone="neutral" />,
+        cell: (row) => <StatusBadge label={getLabelById(productStatusById, row.productStatusId)} tone="neutral" />,
         sortable: true,
-        sortAccessor: (row) => productStatusById.get(row.productStatusId) ?? "",
+        sortAccessor: (row) => getLabelById(productStatusById, row.productStatusId),
       },
       {
         id: "stockQuantity",
@@ -163,7 +163,7 @@ export function ProductsCrudSection() {
         width: 112,
         align: "right",
         cell: (row) => (
-          <div className="flex justify-end gap-1">
+          <div data-row-action="true" className="flex justify-end gap-1">
             <Button
               variant="ghost"
               size="icon"
@@ -306,7 +306,6 @@ export function ProductsCrudSection() {
           emptyTitle="Нет препаратов"
           emptyDescription="Создайте новый препарат или измените фильтры."
           rowKey={(row) => row.id}
-          onRowClick={(row) => openEdit(row.id)}
         />
       </div>
 
@@ -326,3 +325,11 @@ function mapOptionsToMap(options: Array<{ value: number; label: string }>) {
   return map;
 }
 
+function getLabelById(map: Map<number, string>, id: number | string | null | undefined) {
+  if (typeof id === "number") return map.get(id) ?? "—";
+  if (typeof id === "string") {
+    const parsed = Number(id);
+    if (Number.isFinite(parsed)) return map.get(parsed) ?? "—";
+  }
+  return "—";
+}

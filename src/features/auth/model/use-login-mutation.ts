@@ -12,7 +12,7 @@ export function useLoginMutation() {
   return useMutation<CurrentUser, Error, LoginDto>({
     mutationFn: login,
     onError: (error) => {
-      toast.error(getApiErrorMessage(error, "Invalid email or password"));
+      toast.error(getApiErrorMessage(error, "Неверный email или пароль"));
     },
   });
 }

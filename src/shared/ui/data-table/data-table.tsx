@@ -108,9 +108,9 @@ export function DataTable<T>({
   return (
     <div className={cn("rounded-xl border bg-card shadow-sm", className)}>
       <div className="w-full overflow-auto">
-        <table className="w-full border-separate border-spacing-0">
+        <table className="w-full border-collapse">
           <thead>
-            <tr className="border-b">
+            <tr className="border-b border-border/70">
               {columns.map((column) => (
                 <th
                   key={column.id}
@@ -161,13 +161,21 @@ export function DataTable<T>({
               </tr>
             </tbody>
           ) : (
-            <tbody>
+            <tbody className="divide-y divide-border/60">
               {sortedData.map((row, index) => (
                 <tr
                   key={rowKey ? rowKey(row, index) : index}
-                  onClick={onRowClick ? () => onRowClick(row) : undefined}
+                  onClick={
+                    onRowClick
+                      ? (event) => {
+                          const target = event.target as HTMLElement | null;
+                          if (target?.closest('[data-row-action="true"]')) return;
+                          onRowClick(row);
+                        }
+                      : undefined
+                  }
                   className={cn(
-                    "border-b last:border-b-0 transition-colors",
+                    "transition-colors",
                     onRowClick ? "cursor-pointer hover:bg-muted/30" : null,
                   )}
                 >

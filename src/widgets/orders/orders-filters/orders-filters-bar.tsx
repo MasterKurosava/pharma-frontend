@@ -116,19 +116,6 @@ export function OrdersFiltersBar({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/60 pt-3">
-          <div className="inline-flex items-center gap-2 text-xs text-muted-foreground">
-            <SlidersHorizontal className="h-3.5 w-3.5" />
-            Управление списком
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" size="sm" onClick={onReset}>
-              Сбросить
-            </Button>
-          </div>
-        </div>
-
         <details className="group rounded-lg border border-border/70 bg-muted/20 p-2.5">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-2 rounded-md px-1 text-sm">
             <span className="inline-flex items-center gap-2 text-muted-foreground">
@@ -141,7 +128,7 @@ export function OrdersFiltersBar({
             <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180" />
           </summary>
 
-          <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
             <NativeSelect
               value={state.clientId ?? ""}
               options={[{ value: 0, label: "Любой клиент" }, ...clientOptions]}

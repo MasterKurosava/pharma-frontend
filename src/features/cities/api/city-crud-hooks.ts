@@ -7,6 +7,9 @@ import { citiesQueryKeys } from "@/shared/api/query-keys/cities";
 import { getApiErrorMessage } from "@/shared/lib/get-api-error-message";
 import type { SerializableQueryParams } from "@/shared/lib/serialize-query-params";
 
+const CITY_STALE_TIME_MS = 5 * 60 * 1000;
+const CITY_GC_TIME_MS = 60 * 60 * 1000;
+
 function toSerializableParams(params: CityListParams | undefined): SerializableQueryParams | undefined {
   if (!params) return undefined;
   return {
@@ -21,6 +24,8 @@ export function useCitiesQuery(params?: CityListParams) {
     queryKey: citiesQueryKeys.list(toSerializableParams(params)),
     queryFn: () => getCities(params),
     retry: false,
+    staleTime: CITY_STALE_TIME_MS,
+    gcTime: CITY_GC_TIME_MS,
   });
 }
 

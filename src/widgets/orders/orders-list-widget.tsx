@@ -48,7 +48,7 @@ export function OrdersListWidget() {
     const toMap = (opts: Array<{ value: number; label: string }>) => new Map(opts.map((o) => [o.value, o.label]));
     return {
       countries: toMap(options.countries.options),
-      cities: toMap(options.cityOptions),
+      cities: toMap(options.allCityOptions),
       clients: toMap(options.clientOptions),
       paymentStatuses: toMap(options.paymentStatuses.options),
       orderStatuses: toMap(options.orderStatuses.options),

@@ -9,6 +9,9 @@ import type { Client } from "@/entities/client/api/client-types";
 
 export function useOrderFilterOptions(countryId?: number) {
   const countries = useDictionaryOptionsQuery("countries", { params: { isActive: true }, includeCodeInLabel: true });
+  const allCitiesQuery = useCitiesQuery({
+    search: undefined,
+  });
   const citiesQuery = useCitiesQuery({
     countryId: countryId ?? undefined,
     isActive: true,
@@ -28,6 +31,11 @@ export function useOrderFilterOptions(countryId?: number) {
     return items.map((c: City) => ({ value: c.id, label: c.name }));
   }, [citiesQuery.data]);
 
+  const allCityOptions = useMemo<DictionarySelectOption[]>(() => {
+    const items = allCitiesQuery.data ?? [];
+    return items.map((c: City) => ({ value: c.id, label: c.name }));
+  }, [allCitiesQuery.data]);
+
   const clientOptions = useMemo<DictionarySelectOption[]>(() => {
     const items = clientsQuery.data ?? [];
     return items.map((c: Client) => ({
@@ -38,6 +46,8 @@ export function useOrderFilterOptions(countryId?: number) {
 
   return {
     countries,
+    allCitiesQuery,
+    allCityOptions,
     citiesQuery,
     cityOptions,
     clientsQuery,

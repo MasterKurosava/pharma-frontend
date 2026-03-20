@@ -84,7 +84,7 @@ export function CitiesCrudSection() {
         align: "right",
         width: 112,
         cell: (row) => (
-          <div className="flex justify-end gap-1">
+          <div data-row-action="true" className="flex justify-end gap-1">
             <Button
               variant="ghost"
               size="icon"
@@ -185,11 +185,6 @@ export function CitiesCrudSection() {
           emptyTitle="No cities found"
           emptyDescription="Try adjusting search and filters, or create a new city."
           rowKey={(row) => row.id}
-          onRowClick={(row) => {
-            setModalMode("edit");
-            setSelectedCityId(row.id);
-            setModalOpen(true);
-          }}
         />
       </div>
 

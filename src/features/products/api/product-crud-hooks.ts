@@ -6,6 +6,9 @@ import type { CreateProductDto, ProductListParams, UpdateProductDto } from "@/en
 import { productsQueryKeys } from "@/shared/api/query-keys/products";
 import { getApiErrorMessage } from "@/shared/lib/get-api-error-message";
 
+const PRODUCT_STALE_TIME_MS = 3 * 60 * 1000;
+const PRODUCT_GC_TIME_MS = 45 * 60 * 1000;
+
 function toListParams(params: ProductListParams | undefined) {
   if (!params) return undefined;
   return {
@@ -23,6 +26,8 @@ export function useProductsQuery(params?: ProductListParams) {
     queryKey: productsQueryKeys.list(toListParams(params)),
     queryFn: () => getProducts(params),
     retry: false,
+    staleTime: PRODUCT_STALE_TIME_MS,
+    gcTime: PRODUCT_GC_TIME_MS,
   });
 }
 

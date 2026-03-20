@@ -80,7 +80,7 @@ export function DictionaryCrudSection({ resource }: DictionaryCrudSectionProps) 
         align: "right",
         width: 112,
         cell: (row) => (
-          <div className="flex justify-end gap-1">
+          <div data-row-action="true" className="flex justify-end gap-1">
             <Button
               variant="ghost"
               size="icon"
@@ -157,11 +157,6 @@ export function DictionaryCrudSection({ resource }: DictionaryCrudSectionProps) 
           rowKey={(row) => row.id}
           emptyTitle={`Нет ${config.singularLabel.toLowerCase()} найдено`}
           emptyDescription="Попробуйте изменить поиск или создать новый элемент."
-          onRowClick={(row) => {
-            setModalMode("edit");
-            setSelectedItem(row);
-            setModalOpen(true);
-          }}
         />
       </div>
 

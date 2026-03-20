@@ -10,8 +10,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/sha
 import { Input } from "@/shared/ui/input";
 
 const loginSchema = z.object({
-  email: z.string().trim().email("Enter a valid email"),
-  password: z.string().min(6, "Minimum 6 characters"),
+  email: z.string().trim().email("Введите корректный email"),
+  password: z.string().min(6, "Минимально 6 символов"),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -54,7 +54,7 @@ export function LoginPage() {
         <div className="space-y-3">
           <h1 className="text-3xl font-semibold tracking-tight">Pharma Admin</h1>
           <p className="max-w-sm text-sm text-muted-foreground">
-            Secure access to orders, products, clients and dictionaries in one administration panel.
+            Панель управления для заказов, товаров, клиентов и словарей в одном административном панеле.
           </p>
         </div>
       </div>
@@ -62,20 +62,20 @@ export function LoginPage() {
       <div className="flex items-center justify-center p-4 md:p-8">
         <Card className="w-full max-w-md border-border/70 bg-card/95 shadow-lg">
           <CardHeader>
-            <CardTitle>Sign in to your account</CardTitle>
-            <CardDescription>Use your admin credentials to continue.</CardDescription>
+            <CardTitle>Вход в систему</CardTitle>
+            <CardDescription>Используйте свои административные учетные данные для продолжения.</CardDescription>
           </CardHeader>
           <CardContent>
             <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
               <div className="space-y-1.5">
                 <label htmlFor="email" className="text-sm font-medium">
-                  Email
+                  Электронная почта
                 </label>
                 <Input
                   id="email"
                   type="email"
                   autoComplete="email"
-                  placeholder="admin@example.com"
+                  placeholder="admin@pharma.com"
                   {...register("email")}
                 />
                 {errors.email ? <p className="text-xs text-destructive">{errors.email.message}</p> : null}
@@ -83,20 +83,20 @@ export function LoginPage() {
 
               <div className="space-y-1.5">
                 <label htmlFor="password" className="text-sm font-medium">
-                  Password
+                  Пароль
                 </label>
                 <Input
                   id="password"
                   type="password"
                   autoComplete="current-password"
-                  placeholder="Enter your password"
+                  placeholder="Введите ваш пароль"
                   {...register("password")}
                 />
                 {errors.password ? <p className="text-xs text-destructive">{errors.password.message}</p> : null}
               </div>
 
               <Button className="w-full" type="submit" disabled={loginMutation.isPending}>
-                {loginMutation.isPending ? "Signing in..." : "Sign in"}
+                {loginMutation.isPending ? "Вход в систему..." : "Вход в систему"}
               </Button>
             </form>
           </CardContent>

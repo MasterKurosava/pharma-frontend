@@ -1,12 +1,9 @@
 import { useMemo, useState } from "react";
-import { toast } from "sonner";
 import { DataTable, type DataTableColumn } from "@/shared/ui/data-table/data-table";
 import { StatusBadge } from "@/shared/ui/status-badge";
 import type { Order, OrderSortBy, OrderSortOrder } from "@/entities/order/api/order-types";
 import { Button } from "@/shared/ui/button";
-import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
-import { Pencil, Trash2 } from "lucide-react";
-import { useDeleteOrderMutation } from "@/features/orders/api/order-save-mutations";
+import { Pencil } from "lucide-react";
 
 function formatMoney(value?: number | null) {
   if (value === null || typeof value === "undefined") return "—";
@@ -54,17 +51,6 @@ export function OrdersTable({
 }: OrdersTableProps) {
   const [localSortState, setLocalSortState] = useState<{ columnId: string; order: "asc" | "desc" } | null>(null);
 
-  const deleteMutation = useDeleteOrderMutation();
-
-  const handleDelete = async (order: Order) => {
-    try {
-      await deleteMutation.mutateAsync(order.id);
-      toast.success(`Заказ #${order.id} удален`);
-    } catch {
-      // Error toast is shown in mutation onError.
-    }
-  };
-
   const getMapLabel = (map: Map<number, string>, id: number | string | null | undefined) => {
     if (typeof id === "number") return map.get(id);
     if (typeof id === "string") {
@@ -96,10 +82,10 @@ export function OrdersTable({
       cell: (row) => {
         const country = getMapLabel(options.countries, row.countryId) ?? "—";
         const city = getMapLabel(options.cities, row.cityId) ?? "—";
-        const line = country === "—" && city === "—" ? "—" : `${country} — ${city}`;
         return (
           <div className="min-w-0">
-            <div className="truncate text-sm">{line}</div>
+            <div className="truncate text-sm">{country}</div>
+            <div className="truncate text-xs text-muted-foreground">{city}</div>
             <div className="truncate text-xs text-muted-foreground">{row.address ?? "—"}</div>
           </div>
         );
@@ -176,43 +162,21 @@ export function OrdersTable({
     {
       id: "actions",
       header: "",
-      width: 112,
+      width: 56,
       align: "right",
       cell: (row) => (
-        <div className="flex justify-end gap-1">
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={(e) => {
-              e.stopPropagation();
-              onRowClick(row);
-            }}
-            aria-label="Редактировать заказ"
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-
-          <ConfirmDialog
-            trigger={
-              <Button
-                size="icon"
-                variant="ghost"
-                aria-label="Удалить заказ"
-                onClick={(e) => e.stopPropagation()}
-                disabled={deleteMutation.isPending}
-              >
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
-            }
-            title="Удалить заказ?"
-            description={`Заказ #${row.id} будет удален.`}
-            confirmLabel="Удалить"
-            cancelLabel="Отмена"
-            confirmVariant="destructive"
-            isConfirming={deleteMutation.isPending}
-            onConfirm={() => handleDelete(row)}
-          />
-        </div>
+        <Button
+          data-row-action="true"
+          size="icon"
+          variant="ghost"
+          onClick={(e) => {
+            e.stopPropagation();
+            onRowClick(row);
+          }}
+          aria-label="Редактировать заказ"
+        >
+          <Pencil className="h-4 w-4" />
+        </Button>
       ),
     },
   ];

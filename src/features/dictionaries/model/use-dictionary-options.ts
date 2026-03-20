@@ -18,21 +18,10 @@ export function useDictionaryOptionsQuery(
   resource: DictionaryResourceName,
   { params, includeCodeInLabel = true }: UseDictionaryOptionsQueryParams = {},
 ) {
-  const queryParams: DictionaryListParams | undefined = params
-    ? {
-        ...params,
-        isActive: undefined,
-      }
-    : undefined;
-
-  const query = useDictionaryListQuery(resource, queryParams);
+  const query = useDictionaryListQuery(resource, params);
 
   const options = useMemo<DictionarySelectOption[]>(() => {
-    const rawItems = query.data ?? [];
-    const items =
-      typeof params?.isActive === "boolean"
-        ? rawItems.filter((item: DictionaryItem) => Boolean(item.isActive) === params.isActive)
-        : rawItems;
+    const items = (query.data ?? []) as DictionaryItem[];
 
     return items.map((item: DictionaryItem) => {
       const baseLabel = item.name || item.label;

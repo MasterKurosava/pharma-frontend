@@ -12,6 +12,9 @@ import { dictionariesQueryKeys } from "@/shared/api/query-keys";
 import { getApiErrorMessage } from "@/shared/lib/get-api-error-message";
 import type { SerializableQueryParams } from "@/shared/lib/serialize-query-params";
 
+const DICTIONARY_STALE_TIME_MS = 30 * 60 * 1000;
+const DICTIONARY_GC_TIME_MS = 6 * 60 * 60 * 1000;
+
 function toSerializableParams(params: DictionaryListParams | undefined): SerializableQueryParams | undefined {
   if (!params) return undefined;
 
@@ -26,6 +29,11 @@ export function useDictionaryListQuery(resource: DictionaryResourceName, params?
     queryKey: dictionariesQueryKeys.list(resource, toSerializableParams(params)),
     queryFn: () => getDictionaryList(resource, params),
     retry: false,
+    staleTime: DICTIONARY_STALE_TIME_MS,
+    gcTime: DICTIONARY_GC_TIME_MS,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchOnMount: false,
   });
 }
 
