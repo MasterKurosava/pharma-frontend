@@ -1,0 +1,52 @@
+export type Product = {
+  id: number;
+  name: string;
+  manufacturerId: number;
+  activeSubstanceId: number;
+  productStatusId: number;
+  productOrderSourceId: number;
+  isActive: boolean;
+  stockQuantity: number;
+  reservedQuantity: number;
+  availableQuantity: number;
+  imageUrl?: string | null;
+  description?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type ProductListParams = {
+  search?: string;
+  manufacturerId?: number;
+  activeSubstanceId?: number;
+  productStatusId?: number;
+  productOrderSourceId?: number;
+  isActive?: boolean;
+};
+
+export type CreateProductDto = {
+  name: string;
+  manufacturerId: number;
+  activeSubstanceId: number;
+  productStatusId: number;
+  productOrderSourceId: number;
+  isActive: boolean;
+  stockQuantity: number;
+  reservedQuantity: number;
+  imageUrl?: string | null;
+  description?: string | null;
+};
+
+export type UpdateProductDto = {
+  name?: string;
+  manufacturerId?: number;
+  activeSubstanceId?: number;
+  productStatusId?: number;
+  productOrderSourceId?: number;
+  isActive?: boolean;
+  stockQuantity?: number;
+  reservedQuantity?: number;
+  imageUrl?: string | null;
+  description?: string | null;
+};
+
