@@ -1,5 +1,5 @@
 import { Pencil, Search, SlidersHorizontal, Trash2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { useDebouncedValue } from "@/shared/lib/use-debounced-value";
 import { DataTable, type DataTableColumn } from "@/shared/ui/data-table/data-table";
@@ -69,16 +69,16 @@ export function ProductsCrudSection() {
   const [drawerMode, setDrawerMode] = useState<"create" | "edit">("create");
   const [activeProductId, setActiveProductId] = useState<number | string | undefined>(undefined);
 
-  const deleteMutation = useDeleteProductMutation();
+  const { mutateAsync: deleteProductAsync, isPending: isDeletingProduct } = useDeleteProductMutation();
 
-  const handleDelete = async (row: Product) => {
+  const handleDelete = useCallback(async (row: Product) => {
     try {
-      await deleteMutation.mutateAsync(row.id);
+      await deleteProductAsync(row.id);
       toast.success("Product deleted");
     } catch {
       // Error toast is shown in mutation onError.
     }
-  };
+  }, [deleteProductAsync]);
 
   const openCreate = () => {
     setDrawerMode("create");
@@ -86,11 +86,11 @@ export function ProductsCrudSection() {
     setDrawerOpen(true);
   };
 
-  const openEdit = (productId: number | string) => {
+  const openEdit = useCallback((productId: number | string) => {
     setDrawerMode("edit");
     setActiveProductId(productId);
     setDrawerOpen(true);
-  };
+  }, []);
 
   const columns = useMemo<Array<DataTableColumn<Product>>>(() => {
     return [
@@ -183,7 +183,7 @@ export function ProductsCrudSection() {
                   size="icon"
                   aria-label="Delete product"
                   onClick={(e) => e.stopPropagation()}
-                  disabled={deleteMutation.isPending}
+                  disabled={isDeletingProduct}
                 >
                   <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
@@ -193,14 +193,14 @@ export function ProductsCrudSection() {
               confirmLabel="Delete"
               cancelLabel="Cancel"
               confirmVariant="destructive"
-              isConfirming={deleteMutation.isPending}
+              isConfirming={isDeletingProduct}
               onConfirm={() => handleDelete(row)}
             />
           </div>
         ),
       },
     ];
-  }, [activeSubstanceById, manufacturerById, productStatusById, deleteMutation]);
+  }, [activeSubstanceById, manufacturerById, productStatusById, openEdit, handleDelete, isDeletingProduct]);
 
   const onResetFilters = () => {
     setSearch("");

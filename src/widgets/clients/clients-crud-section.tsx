@@ -1,5 +1,5 @@
 import { Pencil, Trash2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { useDebouncedValue } from "@/shared/lib/use-debounced-value";
 import { DataTable, type DataTableColumn } from "@/shared/ui/data-table/data-table";
@@ -47,16 +47,16 @@ export function ClientsCrudSection() {
   const [modalMode, setModalMode] = useState<"create" | "edit">("create");
   const [selectedClientId, setSelectedClientId] = useState<number | string | undefined>(undefined);
 
-  const deleteMutation = useDeleteClientMutation();
+  const { mutateAsync: deleteClientAsync, isPending: isDeletingClient } = useDeleteClientMutation();
 
-  const handleDelete = async (row: Client) => {
+  const handleDelete = useCallback(async (row: Client) => {
     try {
-      await deleteMutation.mutateAsync(row.id);
+      await deleteClientAsync(row.id);
       toast.success("Client deleted");
     } catch {
       // Error toast is shown in mutation onError.
     }
-  };
+  }, [deleteClientAsync]);
 
   const columns = useMemo<Array<DataTableColumn<Client>>>(
     () => [
@@ -107,7 +107,7 @@ export function ClientsCrudSection() {
                   size="icon"
                   aria-label="Delete client"
                   onClick={(e) => e.stopPropagation()}
-                  disabled={deleteMutation.isPending}
+                  disabled={isDeletingClient}
                 >
                   <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
@@ -117,14 +117,14 @@ export function ClientsCrudSection() {
               confirmLabel="Delete"
               cancelLabel="Cancel"
               confirmVariant="destructive"
-              isConfirming={deleteMutation.isPending}
+              isConfirming={isDeletingClient}
               onConfirm={() => handleDelete(row)}
             />
           </div>
         ),
       },
     ],
-    [statusById, deleteMutation],
+    [statusById, handleDelete, isDeletingClient],
   );
 
   return (

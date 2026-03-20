@@ -1,5 +1,5 @@
 import { Pencil, Trash2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { useDebouncedValue } from "@/shared/lib/use-debounced-value";
 import { DataTable, type DataTableColumn } from "@/shared/ui/data-table/data-table";
@@ -33,16 +33,16 @@ export function DictionaryCrudSection({ resource }: DictionaryCrudSectionProps) 
   const [modalMode, setModalMode] = useState<"create" | "edit">("create");
   const [selectedItem, setSelectedItem] = useState<DictionaryItem | null>(null);
 
-  const deleteMutation = useDeleteDictionaryMutation(resource);
+  const { mutateAsync: deleteDictionaryAsync, isPending: isDeletingDictionary } = useDeleteDictionaryMutation(resource);
 
-  const handleDelete = async (row: DictionaryItem) => {
+  const handleDelete = useCallback(async (row: DictionaryItem) => {
     try {
-      await deleteMutation.mutateAsync(row.id);
+      await deleteDictionaryAsync(row.id);
       toast.success("Item deleted");
     } catch {
       // Error toast is shown in mutation onError.
     }
-  };
+  }, [deleteDictionaryAsync]);
 
   const columns = useMemo<Array<DataTableColumn<DictionaryItem>>>(
     () => {
@@ -102,7 +102,7 @@ export function DictionaryCrudSection({ resource }: DictionaryCrudSectionProps) 
                   size="icon"
                   aria-label="Delete item"
                   onClick={(e) => e.stopPropagation()}
-                  disabled={deleteMutation.isPending}
+                  disabled={isDeletingDictionary}
                 >
                   <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
@@ -112,7 +112,7 @@ export function DictionaryCrudSection({ resource }: DictionaryCrudSectionProps) 
               confirmLabel="Delete"
               cancelLabel="Cancel"
               confirmVariant="destructive"
-              isConfirming={deleteMutation.isPending}
+              isConfirming={isDeletingDictionary}
               onConfirm={() => handleDelete(row)}
             />
           </div>
@@ -121,7 +121,7 @@ export function DictionaryCrudSection({ resource }: DictionaryCrudSectionProps) 
 
       return base;
     },
-    [config.singularLabel, config.supportsActive, deleteMutation],
+    [config.singularLabel, config.supportsActive, handleDelete, isDeletingDictionary],
   );
 
   const onCreate = () => {

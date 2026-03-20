@@ -1,5 +1,5 @@
 import { Pencil, Trash2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { useCitiesQuery, useDeleteCityMutation } from "@/features/cities/api/city-crud-hooks";
 import { CityModalForm } from "@/features/cities/ui/city-modal-form";
@@ -45,16 +45,16 @@ export function CitiesCrudSection() {
   const [modalMode, setModalMode] = useState<"create" | "edit">("create");
   const [selectedCityId, setSelectedCityId] = useState<number | string | undefined>(undefined);
 
-  const deleteMutation = useDeleteCityMutation();
+  const { mutateAsync: deleteCityAsync, isPending: isDeletingCity } = useDeleteCityMutation();
 
-  const handleDelete = async (row: City) => {
+  const handleDelete = useCallback(async (row: City) => {
     try {
-      await deleteMutation.mutateAsync(row.id);
+      await deleteCityAsync(row.id);
       toast.success("City deleted");
     } catch {
       // Error toast is shown in mutation onError.
     }
-  };
+  }, [deleteCityAsync]);
 
   const columns = useMemo<Array<DataTableColumn<City>>>(
     () => [
@@ -106,7 +106,7 @@ export function CitiesCrudSection() {
                   size="icon"
                   aria-label="Delete city"
                   onClick={(e) => e.stopPropagation()}
-                  disabled={deleteMutation.isPending}
+                  disabled={isDeletingCity}
                 >
                   <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
@@ -116,14 +116,14 @@ export function CitiesCrudSection() {
               confirmLabel="Delete"
               cancelLabel="Cancel"
               confirmVariant="destructive"
-              isConfirming={deleteMutation.isPending}
+              isConfirming={isDeletingCity}
               onConfirm={() => handleDelete(row)}
             />
           </div>
         ),
       },
     ],
-    [countryById, deleteMutation],
+    [countryById, handleDelete, isDeletingCity],
   );
 
   const activeFilterControl = (
