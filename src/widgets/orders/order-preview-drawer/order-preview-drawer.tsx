@@ -102,7 +102,7 @@ export function OrderPreviewDrawer({
                 />
               </div>
               <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">Статус сборки</p>
+                <p className="text-xs text-muted-foreground">Куда собрать</p>
                 <StatusBadge
                   label={orderDetail.deliveryStatus ? options.deliveryStatuses.get(orderDetail.deliveryStatus) ?? "—" : "—"}
                   tone="neutral"

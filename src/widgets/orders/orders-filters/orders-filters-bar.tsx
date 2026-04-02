@@ -153,10 +153,10 @@ export function OrdersFiltersBar({
           {isVisible("deliveryStatus") ? (
             <div className="w-full sm:w-[190px]">
               <div className="space-y-1">
-                <p className="px-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Статус сборки</p>
+                <p className="px-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Куда собрать</p>
                 <NativeSelect
                   value={deliveryStatusDraft}
-                  options={[{ value: "", label: "Любой статус сборки" }, ...deliveryStatusOptions]}
+                  options={[{ value: "", label: "Любое направление сборки" }, ...deliveryStatusOptions]}
                   onValueChange={(next) => setDeliveryStatusDraft(String(next || ""))}
                   placeholder=""
                   disabled={Boolean(fixedFilters?.deliveryStatuses?.length)}

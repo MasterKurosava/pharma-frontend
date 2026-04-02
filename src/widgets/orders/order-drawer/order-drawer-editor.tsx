@@ -454,28 +454,26 @@ export function OrderDrawerEditor({ open, onOpenChange, orderId, onCreated }: Or
 
                   </div>
 
-                  {showAdvancedDeliveryFields ? (
-                    <Controller
-                      control={form.control}
-                      name="deliveryPrice"
-                      render={({ field }) => (
-                        <div className="space-y-1.5 md:col-span-2">
-                          <label className="text-sm font-medium">Цена доставки</label>
-                          <Input
-                            type="number"
-                            min={0}
-                            value={field.value}
-                            onChange={(e) => {
-                              const n = Number(e.target.value);
-                              field.onChange(Number.isFinite(n) ? n : 0);
-                            }}
-                            className="bg-white"
-                            disabled={isSubmitting || isReadonlyOrder || !canEditField("deliveryPrice")}
-                          />
-                        </div>
-                      )}
-                    />
-                  ) : null}
+                  <Controller
+                    control={form.control}
+                    name="deliveryPrice"
+                    render={({ field }) => (
+                      <div className="space-y-1.5 md:col-span-2">
+                        <label className="text-sm font-medium">Цена доставки</label>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={field.value}
+                          onChange={(e) => {
+                            const n = Number(e.target.value);
+                            field.onChange(Number.isFinite(n) ? n : 0);
+                          }}
+                          className="bg-white"
+                          disabled={isSubmitting || isReadonlyOrder || !canEditField("deliveryPrice")}
+                        />
+                      </div>
+                    )}
+                  />
 
                   <Controller
                     control={form.control}
@@ -548,7 +546,7 @@ export function OrderDrawerEditor({ open, onOpenChange, orderId, onCreated }: Or
                       name="deliveryStatus"
                       render={({ field }) => (
                         <div className="space-y-1.5">
-                          <label className="text-sm font-medium">Статус сборки</label>
+                          <label className="text-sm font-medium">Куда собрать</label>
                           <NativeSelect
                             value={field.value}
                             options={deliveryStatusOptions}

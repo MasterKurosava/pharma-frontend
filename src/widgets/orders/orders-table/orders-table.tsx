@@ -1,9 +1,11 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type MouseEvent } from "react";
 import { DataTable, type DataTableColumn } from "@/shared/ui/data-table/data-table";
 import { StatusBadge } from "@/shared/ui/status-badge";
 import type { Order, OrderSortBy, OrderSortOrder } from "@/entities/order/api/order-types";
 import { Button } from "@/shared/ui/button";
 import { Pencil } from "lucide-react";
+import { NativeSelect } from "@/shared/ui/native-select/native-select";
+import type { OrderUpdateFieldKey } from "@/entities/user/model/types";
 
 function formatMoney(value?: number | null) {
   if (value === null || typeof value === "undefined") return "—";
@@ -26,6 +28,15 @@ type OrdersTableProps = {
   sortBy: OrderSortBy;
   sortOrder: OrderSortOrder;
   onSortChange: (sortBy: OrderSortBy, sortOrder: OrderSortOrder) => void;
+  editableFields: Set<OrderUpdateFieldKey>;
+  onInlineStatusChange: (payload: {
+    id: number;
+    field: "orderStatus" | "paymentStatus" | "deliveryStatus";
+    value: string;
+  }) => void;
+  selectedOrderIds: Set<number>;
+  onToggleOrderSelection: (orderId: number, event: MouseEvent<HTMLInputElement>) => void;
+  onToggleAllVisible: (checked: boolean) => void;
   options: {
     countries: Map<number, string>;
     paymentStatuses: Map<string, { label: string; color?: string }>;
@@ -44,9 +55,18 @@ export function OrdersTable({
   sortBy,
   sortOrder,
   onSortChange: onServerSortChange,
+  editableFields,
+  onInlineStatusChange,
+  selectedOrderIds,
+  onToggleOrderSelection,
+  onToggleAllVisible,
   options,
 }: OrdersTableProps) {
   const [localSortState, setLocalSortState] = useState<{ columnId: string; order: "asc" | "desc" } | null>(null);
+  const [editingCell, setEditingCell] = useState<{
+    orderId: number;
+    field: "orderStatus" | "paymentStatus" | "deliveryStatus";
+  } | null>(null);
 
   const getMapLabel = (map: Map<number, string>, id: number | string | null | undefined) => {
     if (typeof id === "number") return map.get(id);
@@ -64,8 +84,102 @@ export function OrdersTable({
     if (!id) return undefined;
     return map.get(id);
   };
+  const isEditable = (field: OrderUpdateFieldKey) => editableFields.has(field);
+  const visibleOrderIds = useMemo(() => orders.map((order) => order.id), [orders]);
+  const allVisibleSelected =
+    visibleOrderIds.length > 0 && visibleOrderIds.every((id) => selectedOrderIds.has(id));
+
+  const renderStatusCell = (
+    row: Order,
+    field: "orderStatus" | "paymentStatus" | "deliveryStatus",
+    map: Map<string, { label: string; color?: string }>,
+  ) => {
+    const statusCode = row[field];
+    const status = getStatus(map, statusCode ?? undefined);
+    const isCellEditing = editingCell?.orderId === row.id && editingCell.field === field;
+    const canEdit = isEditable(field);
+    const optionsList = Array.from(map.entries()).map(([value, meta]) => ({
+      value,
+      label: meta.label,
+    }));
+
+    if (isCellEditing) {
+      return (
+        <div data-row-action="true" className="min-w-[180px]">
+          <NativeSelect
+            value={String(statusCode ?? "")}
+            options={optionsList}
+            onValueChange={(next) => {
+              if (!next || String(next) === String(statusCode ?? "")) {
+                setEditingCell(null);
+                return;
+              }
+              onInlineStatusChange({
+                id: row.id,
+                field,
+                value: String(next),
+              });
+              setEditingCell(null);
+            }}
+            onBlur={() => setEditingCell(null)}
+            placeholder="Выберите статус"
+            searchable={false}
+            autoFocus
+          />
+        </div>
+      );
+    }
+
+    if (!canEdit) {
+      return <StatusBadge label={status?.label ?? "—"} customColor={status?.color} tone="neutral" />;
+    }
+
+    return (
+      <button
+        type="button"
+        data-row-action="true"
+        className="inline-flex"
+        onClick={(event) => {
+          event.stopPropagation();
+          setEditingCell({ orderId: row.id, field });
+        }}
+      >
+        <StatusBadge label={status?.label ?? "—"} customColor={status?.color} tone="neutral" />
+      </button>
+    );
+  };
 
   const columns: Array<DataTableColumn<Order>> = [
+    {
+      id: "select",
+      header: (
+        <input
+          data-row-action="true"
+          type="checkbox"
+          checked={allVisibleSelected}
+          onChange={(event) => onToggleAllVisible(event.target.checked)}
+          aria-label="Выбрать все заказы на странице"
+          className="h-4 w-4 rounded border-input accent-primary"
+        />
+      ),
+      width: 44,
+      align: "center",
+      cell: (row) => (
+        <input
+          data-row-action="true"
+          type="checkbox"
+          checked={selectedOrderIds.has(row.id)}
+          readOnly
+          aria-label={`Выбрать заказ ${row.id}`}
+          className="h-4 w-4 rounded border-input accent-primary"
+          onClick={(event) => {
+            event.stopPropagation();
+            onToggleOrderSelection(row.id, event);
+          }}
+        />
+      ),
+      sortable: false,
+    },
     { id: "id", header: "ID", accessorKey: "id", width: 90, sortable: false },
     {
       id: "location",
@@ -109,30 +223,21 @@ export function OrdersTable({
     {
       id: "orderStatus",
       header: "Статус заказа",
-      cell: (row) => {
-        const status = getStatus(options.orderStatuses, row.orderStatus);
-        return <StatusBadge label={status?.label ?? "—"} customColor={status?.color} tone="neutral" />;
-      },
+      cell: (row) => renderStatusCell(row, "orderStatus", options.orderStatuses),
       sortable: true,
       sortAccessor: (row) => getStatus(options.orderStatuses, row.orderStatus)?.label ?? "",
     },
     {
       id: "paymentStatus",
       header: "Статус оплаты",
-      cell: (row) => {
-        const status = getStatus(options.paymentStatuses, row.paymentStatus);
-        return <StatusBadge label={status?.label ?? "—"} customColor={status?.color} tone="neutral" />;
-      },
+      cell: (row) => renderStatusCell(row, "paymentStatus", options.paymentStatuses),
       sortable: true,
       sortAccessor: (row) => getStatus(options.paymentStatuses, row.paymentStatus)?.label ?? "",
     },
     {
       id: "deliveryStatus",
-      header: "Статус сборки",
-      cell: (row) => {
-        const status = getStatus(options.deliveryStatuses, row.deliveryStatus);
-        return <StatusBadge label={status?.label ?? "—"} customColor={status?.color} tone="neutral" />;
-      },
+      header: "Куда собрать",
+      cell: (row) => renderStatusCell(row, "deliveryStatus", options.deliveryStatuses),
       sortable: true,
       sortAccessor: (row) => getStatus(options.deliveryStatuses, row.deliveryStatus)?.label ?? "",
     },

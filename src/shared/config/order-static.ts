@@ -7,7 +7,7 @@ export type OrderStatusCode =
   | "PACKED"
   | "CLOSED";
 
-export type DeliveryStatusCode = "COLLECT_DOVAS" | "COLLECT_PONY" | "COLLECT_YANDEX";
+export type DeliveryStatusCode = "COLLECT_DOVAS" | "COLLECT_PONY" | "COLLECT_YANDEX" | "COLLECT_PICKUP";
 export type PaymentStatusCode = "UNPAID" | "PREPAID_50" | "PAID";
 
 export const ORDER_STATUS_OPTIONS: Array<{ value: OrderStatusCode; label: string; color: string }> = [
@@ -24,6 +24,7 @@ export const DELIVERY_STATUS_OPTIONS: Array<{ value: DeliveryStatusCode; label: 
   { value: "COLLECT_DOVAS", label: "Соберите ДоВас", color: "#2563eb" },
   { value: "COLLECT_PONY", label: "Соберите Пони", color: "#7c3aed" },
   { value: "COLLECT_YANDEX", label: "Соберите Яндекс", color: "#f59e0b" },
+  { value: "COLLECT_PICKUP", label: "Собрать самовывоз", color: "#0ea5e9" },
 ];
 
 export const PAYMENT_STATUS_OPTIONS: Array<{ value: PaymentStatusCode; label: string; color: string }> = [
