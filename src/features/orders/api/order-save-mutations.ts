@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { createOrder, updateOrder, deleteOrder } from "@/entities/order/api/order-api";
+import { createOrder, updateOrder, deleteOrder, updateOrdersBatchStatus } from "@/entities/order/api/order-api";
 import type { Order, OrderCreateDto, OrderUpdateDto, OrdersListResponse } from "@/entities/order/api/order-types";
 import { ordersQueryKeys } from "@/shared/api/query-keys/orders";
 import { getApiErrorMessage } from "@/shared/lib/get-api-error-message";
@@ -188,8 +188,11 @@ export function useOptimisticBulkUpdateOrdersStatusMutation() {
 
   return useMutation({
     mutationFn: async ({ orderIds, dto }: UpdateManyOrdersStatusPayload) => {
-      await Promise.all(orderIds.map((id) => updateOrder(id, dto)));
-      return orderIds.length;
+      const result = await updateOrdersBatchStatus({
+        ids: orderIds,
+        ...dto,
+      });
+      return result.updatedCount;
     },
     onMutate: async ({ orderIds, dto }) => {
       await queryClient.cancelQueries({ queryKey: ordersQueryKeys.lists(), exact: false });

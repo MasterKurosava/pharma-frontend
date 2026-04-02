@@ -8,6 +8,7 @@ import type {
   OrderUpdateDto,
   OrdersListResponse,
 } from "@/entities/order/api/order-types";
+import type { DeliveryStatusCode, OrderStatusCode, PaymentStatusCode } from "@/shared/config/order-static";
 
 export async function getOrders(params: OrdersListParams): Promise<OrdersListResponse> {
   const normalizedParams = {
@@ -42,3 +43,12 @@ export async function deleteOrder(id: number | string): Promise<void> {
   await apiClient.delete(`/orders/${id}`);
 }
 
+export async function updateOrdersBatchStatus(payload: {
+  ids: number[];
+  orderStatus?: OrderStatusCode;
+  deliveryStatus?: DeliveryStatusCode;
+  paymentStatus?: PaymentStatusCode;
+}): Promise<{ updatedCount: number }> {
+  const { data } = await apiClient.patch<{ updatedCount: number }>("/orders/batch/status", payload);
+  return data;
+}
