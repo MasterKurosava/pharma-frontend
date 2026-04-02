@@ -10,7 +10,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/sha
 import { Input } from "@/shared/ui/input";
 
 const loginSchema = z.object({
-  login: z.string().trim().min(1, "Введите логин"),
+  login: z
+    .string()
+    .trim()
+    .min(1, "Введите логин")
+    .refine((value) => !value.includes("@"), "Нужен логин, не email"),
   password: z.string().min(6, "Минимально 6 символов"),
 });
 
