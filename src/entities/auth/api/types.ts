@@ -1,7 +1,7 @@
 import type { CurrentUser } from "@/entities/user/model/types";
 
 export type LoginDto = {
-  email: string;
+  login: string;
   password: string;
 };
 

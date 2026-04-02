@@ -16,6 +16,7 @@ import { useProductDetailQuery, useCreateProductMutation, useUpdateProductMutati
 import type { Product } from "@/entities/product/api/product-types";
 import { type ProductFormValues, productFormSchema } from "@/features/products/model/product-form-schema";
 import { productApiToFormValues, productFormValuesToCreateDto, productFormValuesToUpdateDto } from "@/features/products/model/product-mappers";
+import { PRODUCT_AVAILABILITY_OPTIONS } from "@/shared/config/product-availability";
 
 type ProductDrawerProps = {
   open: boolean;
@@ -29,7 +30,7 @@ function defaultCreateValues(): ProductFormValues {
     name: "",
     manufacturerId: 0,
     activeSubstanceId: 0,
-    productStatusId: 0,
+    availabilityStatus: PRODUCT_AVAILABILITY_OPTIONS[2].value,
     productOrderSourceId: 0,
     stockQuantity: 0,
     reservedQuantity: 0,
@@ -51,16 +52,13 @@ export function ProductDrawer({ open, onOpenChange, mode, productId }: ProductDr
     "active-substances",
     { params: { isActive: true, search: undefined } },
   );
-  const { options: productStatusOptions, isPending: isProductStatusesPending } = useDictionaryOptionsQuery("product-statuses", {
-    params: { isActive: true, search: undefined },
-  });
   const { options: productOrderSourceOptions, isPending: isProductOrderSourcesPending } = useDictionaryOptionsQuery(
     "product-order-sources",
-    { params: { isActive: true, search: undefined } },
+    { params: { search: undefined } },
   );
 
   const isDictionariesPending =
-    isManufacturersPending || isActiveSubstancesPending || isProductStatusesPending || isProductOrderSourcesPending;
+    isManufacturersPending || isActiveSubstancesPending || isProductOrderSourcesPending;
 
   const defaultValues = useMemo(() => defaultCreateValues(), []);
 
@@ -91,7 +89,21 @@ export function ProductDrawer({ open, onOpenChange, mode, productId }: ProductDr
     control: form.control,
     name: ["stockQuantity", "reservedQuantity"],
   });
+  const watchedAvailabilityStatus = useWatch({
+    control: form.control,
+    name: "availabilityStatus",
+  });
   const availableQuantity = stockQuantity - reservedQuantity;
+
+  const isOnRequestStatus = watchedAvailabilityStatus === "ON_REQUEST";
+
+  useEffect(() => {
+    if (isOnRequestStatus) return;
+    if (form.getValues("productOrderSourceId") !== 0) {
+      form.setValue("productOrderSourceId", 0, { shouldDirty: true, shouldValidate: true });
+    }
+    form.clearErrors("productOrderSourceId");
+  }, [form, isOnRequestStatus]);
 
   const createMutation = useCreateProductMutation();
   const updateMutation = useUpdateProductMutation();
@@ -104,6 +116,11 @@ export function ProductDrawer({ open, onOpenChange, mode, productId }: ProductDr
 
   const onSubmit = async (values: ProductFormValues) => {
     if (!open) return;
+
+    if (isOnRequestStatus && values.productOrderSourceId <= 0) {
+      form.setError("productOrderSourceId", { message: "Выберите источник поступления" });
+      return;
+    }
 
     try {
       if (!isEdit) {
@@ -209,14 +226,15 @@ export function ProductDrawer({ open, onOpenChange, mode, productId }: ProductDr
       isDirty={isDirty}
       footer={footer}
       className="max-w-5xl w-[92vw]"
+      contentClassName="bg-muted/40"
     >
       {isLoading ? (
         <DrawerFormSkeleton />
       ) : (
         <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
-          <div className="space-y-3 rounded-xl border bg-card p-4">
+          <div className="space-y-3 rounded-xl border bg-muted/30 p-4">
             <h3 className="text-sm font-semibold">Основное</h3>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium" htmlFor="product-name">
                   Название
@@ -231,10 +249,27 @@ export function ProductDrawer({ open, onOpenChange, mode, productId }: ProductDr
                   <p className="text-xs text-destructive">{String(form.formState.errors.name.message)}</p>
                 ) : null}
               </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="product-description">
+                  Описание
+                </label>
+                <textarea
+                  id="product-description"
+                  className="min-h-[92px] w-full resize-none rounded-md border border-input bg-white px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                  {...form.register("description")}
+                  disabled={isSubmitting}
+                />
+                {form.formState.errors.description ? (
+                  <p className="text-xs text-destructive">{String(form.formState.errors.description.message)}</p>
+                ) : null}
+              </div>
 
               <div className="space-y-2">
                 <label className="text-sm font-medium" htmlFor="product-image">
-                  Image URL
+                  URL препарата
                 </label>
                 <Input
                   id="product-image"
@@ -247,24 +282,9 @@ export function ProductDrawer({ open, onOpenChange, mode, productId }: ProductDr
                 ) : null}
               </div>
             </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="product-description">
-                Описание
-              </label>
-              <textarea
-                id="product-description"
-                className="min-h-[92px] w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                {...form.register("description")}
-                disabled={isSubmitting}
-              />
-              {form.formState.errors.description ? (
-                <p className="text-xs text-destructive">{String(form.formState.errors.description.message)}</p>
-              ) : null}
-            </div>
           </div>
 
-          <div className="space-y-3 rounded-xl border bg-card p-4">
+          <div className="space-y-3 rounded-xl border bg-muted/30 p-4">
             <h3 className="text-sm font-semibold">Классификация</h3>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
@@ -311,19 +331,19 @@ export function ProductDrawer({ open, onOpenChange, mode, productId }: ProductDr
                 <label className="text-sm font-medium">Статус продукта</label>
                 <Controller
                   control={form.control}
-                  name="productStatusId"
+                  name="availabilityStatus"
                   render={({ field }) => (
                     <NativeSelect
-                      value={field.value === 0 ? "" : field.value}
-                      options={productStatusOptions}
-                      onValueChange={(next) => field.onChange(next === "" ? 0 : next)}
+                      value={field.value}
+                      options={PRODUCT_AVAILABILITY_OPTIONS}
+                      onValueChange={(next) => field.onChange(next)}
                       placeholder="Выберите статус"
                       disabled={isSubmitting}
                     />
                   )}
                 />
-                {form.formState.errors.productStatusId ? (
-                  <p className="text-xs text-destructive">{String(form.formState.errors.productStatusId.message)}</p>
+                {form.formState.errors.availabilityStatus ? (
+                  <p className="text-xs text-destructive">{String(form.formState.errors.availabilityStatus.message)}</p>
                 ) : null}
               </div>
 
@@ -337,8 +357,8 @@ export function ProductDrawer({ open, onOpenChange, mode, productId }: ProductDr
                       value={field.value === 0 ? "" : field.value}
                       options={productOrderSourceOptions}
                       onValueChange={(next) => field.onChange(next === "" ? 0 : next)}
-                      placeholder="Выберите источник"
-                      disabled={isSubmitting}
+                      placeholder={isOnRequestStatus ? "Выберите источник" : "Недоступно для обычного статуса"}
+                      disabled={isSubmitting || !isOnRequestStatus}
                     />
                   )}
                 />
@@ -352,7 +372,7 @@ export function ProductDrawer({ open, onOpenChange, mode, productId }: ProductDr
                   control={form.control}
                   name="isActive"
                   render={({ field }) => (
-                    <label className="flex cursor-pointer items-center gap-3 rounded-xl border bg-card p-3">
+                    <label className="flex cursor-pointer items-center gap-3 rounded-xl border bg-white p-3">
                       <input
                         type="checkbox"
                         checked={field.value}
@@ -370,7 +390,7 @@ export function ProductDrawer({ open, onOpenChange, mode, productId }: ProductDr
             </div>
           </div>
 
-          <div className="space-y-3 rounded-xl border bg-card p-4">
+          <div className="space-y-3 rounded-xl border bg-muted/30 p-4">
             <h3 className="text-sm font-semibold">Остатки</h3>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">

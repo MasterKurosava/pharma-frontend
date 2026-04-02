@@ -1,19 +1,16 @@
 import { X } from "lucide-react";
 
 import { Button } from "@/shared/ui/button";
-import { StatusBadge } from "@/shared/ui/status-badge";
 
 type OrderDrawerHeaderProps = {
   orderId?: number | string;
-  orderStatusLabel?: string;
-  readonlyOrder?: boolean;
+  isCreateMode?: boolean;
   onClose: () => void;
 };
 
 export function OrderDrawerHeader({
   orderId,
-  orderStatusLabel,
-  readonlyOrder = false,
+  isCreateMode,
   onClose,
 }: OrderDrawerHeaderProps) {
   return (
@@ -21,16 +18,8 @@ export function OrderDrawerHeader({
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 space-y-1">
           <h2 className="truncate text-lg font-semibold tracking-tight">
-            {orderId ? `Заказ #${orderId}` : "Редактирование заказа"}
+            {isCreateMode ? "Создание заказа" : orderId ? `Заказ #${orderId}` : "Редактирование заказа"}
           </h2>
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="text-xs text-muted-foreground">ID: {orderId ?? "—"}</p>
-            {orderStatusLabel ? <StatusBadge label={orderStatusLabel} tone="neutral" /> : null}
-            {readonlyOrder ? <StatusBadge label="Только чтение" tone="neutral" /> : null}
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Изменения сохраняются одной операцией.
-          </p>
         </div>
 
         <Button variant="ghost" size="icon" onClick={onClose} aria-label="Закрыть drawer">

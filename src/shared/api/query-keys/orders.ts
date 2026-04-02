@@ -11,6 +11,5 @@ export const ordersQueryKeys = {
   list: (params?: SerializableQueryParams) =>
     [...ordersQueryKeys.lists(), serializeQueryParams(params)] as const,
   detail: (id: number | string) => [...ordersQueryKeys.all, "detail", id] as const,
-  history: (id: number | string) => [...ordersQueryKeys.all, "history", id] as const,
 };
 

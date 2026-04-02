@@ -1,13 +1,23 @@
 import { ChevronDown } from "lucide-react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 
+import { useAuth } from "@/features/auth/model/use-auth";
 import { sidebarNavGroups, sidebarRootItems } from "@/shared/config/navigation";
 import { cn } from "@/shared/lib/utils";
 
 export function AppSidebar() {
-  const location = useLocation();
+  const { user } = useAuth();
+  const allowedRoutes = user?.accessPolicy?.navigation.allowedRoutes ?? ["*"];
+  const hasWildcard = allowedRoutes.includes("*");
+  const canSeeRoute = (route: string) => hasWildcard || allowedRoutes.includes(route);
 
-  const isPathInGroup = (paths: string[]) => paths.some((p) => location.pathname === p || location.pathname.startsWith(`${p}/`));
+  const rootItems = sidebarRootItems.filter((item) => canSeeRoute(item.to));
+  const groups = sidebarNavGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => canSeeRoute(item.to)),
+    }))
+    .filter((group) => group.items.length > 0);
 
   return (
     <div className="flex h-full flex-col">
@@ -18,7 +28,7 @@ export function AppSidebar() {
 
       <nav className="space-y-3">
         <div className="space-y-1">
-          {sidebarRootItems.map((item) => (
+          {rootItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
@@ -39,10 +49,9 @@ export function AppSidebar() {
         </div>
 
         <div className="space-y-2">
-          {sidebarNavGroups.map((group) => {
-            const openByDefault = isPathInGroup(group.items.map((it) => it.to));
+          {groups.map((group) => {
             return (
-              <details key={group.label} className="rounded-lg border bg-card/30" open={openByDefault}>
+              <details key={group.label} className="rounded-lg border bg-card/30" open>
                 <summary className="flex cursor-pointer list-none items-center justify-between rounded-lg px-3 py-2 text-sm font-medium hover:bg-accent/50">
                   <span className="inline-flex items-center gap-2">
                     <group.icon className="h-4 w-4 text-muted-foreground" />

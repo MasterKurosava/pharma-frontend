@@ -3,7 +3,6 @@ import { apiClient } from "@/shared/api/client";
 import type {
   Order,
   OrderCreateDto,
-  OrderHistoryItem,
   OrdersListParams,
   OrderStatsSummary,
   OrderUpdateDto,
@@ -11,7 +10,11 @@ import type {
 } from "@/entities/order/api/order-types";
 
 export async function getOrders(params: OrdersListParams): Promise<OrdersListResponse> {
-  const { data } = await apiClient.get<OrdersListResponse>("/orders", { params });
+  const normalizedParams = {
+    ...params,
+    orderStatuses: params.orderStatuses?.length ? params.orderStatuses.join(",") : undefined,
+  };
+  const { data } = await apiClient.get<OrdersListResponse>("/orders", { params: normalizedParams });
   return data;
 }
 
@@ -22,11 +25,6 @@ export async function getOrderStatsSummary(): Promise<OrderStatsSummary> {
 
 export async function getOrderById(id: number | string): Promise<Order> {
   const { data } = await apiClient.get<Order>(`/orders/${id}`);
-  return data;
-}
-
-export async function getOrderHistory(id: number | string): Promise<OrderHistoryItem[]> {
-  const { data } = await apiClient.get<OrderHistoryItem[]>(`/orders/${id}/history`);
   return data;
 }
 

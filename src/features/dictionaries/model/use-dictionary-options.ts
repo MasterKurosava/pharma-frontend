@@ -6,6 +6,8 @@ import type { DictionaryListParams, DictionaryResourceName, DictionaryItem } fro
 export type DictionarySelectOption = {
   value: number;
   label: string;
+  code?: string;
+  color?: string;
 };
 
 type UseDictionaryOptionsQueryParams = {
@@ -26,7 +28,7 @@ export function useDictionaryOptionsQuery(
     return items.map((item: DictionaryItem) => {
       const baseLabel = item.name || item.label;
       const label = includeCodeInLabel && item.code ? `${baseLabel} (${item.code})` : baseLabel;
-      return { value: item.id, label };
+      return { value: item.id, label, code: item.code, color: item.color };
     });
   }, [includeCodeInLabel, params, query.data]);
 

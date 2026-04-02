@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/sha
 import { Input } from "@/shared/ui/input";
 
 const loginSchema = z.object({
-  email: z.string().trim().email("Введите корректный email"),
+  login: z.string().trim().min(1, "Введите логин"),
   password: z.string().min(6, "Минимально 6 символов"),
 });
 
@@ -35,7 +35,7 @@ export function LoginPage() {
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: "",
+      login: "",
       password: "",
     },
   });
@@ -68,17 +68,17 @@ export function LoginPage() {
           <CardContent>
             <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
               <div className="space-y-1.5">
-                <label htmlFor="email" className="text-sm font-medium">
-                  Электронная почта
+                <label htmlFor="login" className="text-sm font-medium">
+                  Логин
                 </label>
                 <Input
-                  id="email"
-                  type="email"
-                  autoComplete="email"
-                  placeholder="admin@pharma.com"
-                  {...register("email")}
+                  id="login"
+                  type="text"
+                  autoComplete="username"
+                  placeholder="admin"
+                  {...register("login")}
                 />
-                {errors.email ? <p className="text-xs text-destructive">{errors.email.message}</p> : null}
+                {errors.login ? <p className="text-xs text-destructive">{errors.login.message}</p> : null}
               </div>
 
               <div className="space-y-1.5">

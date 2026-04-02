@@ -27,14 +27,11 @@ type OrdersTableProps = {
   sortOrder: OrderSortOrder;
   onSortChange: (sortBy: OrderSortBy, sortOrder: OrderSortOrder) => void;
   options: {
-    clients: Map<number, string>;
     countries: Map<number, string>;
-    cities: Map<number, string>;
-    paymentStatuses: Map<number, string>;
-    orderStatuses: Map<number, string>;
-    assemblyStatuses: Map<number, string>;
+    paymentStatuses: Map<string, { label: string; color?: string }>;
+    orderStatuses: Map<string, { label: string; color?: string }>;
+    deliveryStatuses: Map<string, { label: string; color?: string }>;
     storagePlaces: Map<number, string>;
-    deliveryCompanies: Map<number, string>;
   };
 };
 
@@ -60,28 +57,22 @@ export function OrdersTable({
     return undefined;
   };
 
+  const getStatus = (
+    map: Map<string, { label: string; color?: string }>,
+    id: string | null | undefined,
+  ) => {
+    if (!id) return undefined;
+    return map.get(id);
+  };
+
   const columns: Array<DataTableColumn<Order>> = [
     { id: "id", header: "ID", accessorKey: "id", width: 90, sortable: false },
-    {
-      id: "client",
-      header: "Клиент",
-      cell: (row) => {
-        const clientLabel = row.client?.name ?? options.clients.get(row.clientId ?? -1) ?? `#${row.clientId ?? "—"}`;
-        const phone = row.client?.phone;
-        return (
-          <div className="min-w-0">
-            <div className="truncate text-sm font-medium">{clientLabel}</div>
-            {phone ? <div className="truncate text-xs text-muted-foreground">{phone}</div> : null}
-          </div>
-        );
-      },
-    },
     {
       id: "location",
       header: "Страна/город",
       cell: (row) => {
         const country = getMapLabel(options.countries, row.countryId) ?? "—";
-        const city = getMapLabel(options.cities, row.cityId) ?? "—";
+        const city = row.city ?? "—";
         return (
           <div className="min-w-0">
             <div className="truncate text-sm">{country}</div>
@@ -92,34 +83,58 @@ export function OrdersTable({
       },
     },
     {
+      id: "clientPhone",
+      header: "Телефон клиента",
+      cell: (row) => <span className="text-sm">{row.clientPhone ?? "—"}</span>,
+    },
+    {
+      id: "products",
+      header: "Препараты",
+      cell: (row) => {
+        const previewItems = (row.items ?? []).slice(0, 2);
+        if (previewItems.length === 0) {
+          return <span className="text-xs text-muted-foreground">—</span>;
+        }
+        return (
+          <div className="space-y-0.5">
+            {previewItems.map((item, idx) => (
+              <div key={`${item.productId}-${idx}`} className="text-xs leading-4 text-muted-foreground">
+                {(item.productNameSnapshot ?? `#${item.productId}`)} x {item.quantity}
+              </div>
+            ))}
+          </div>
+        );
+      },
+    },
+    {
       id: "orderStatus",
       header: "Статус заказа",
-      cell: (row) => (
-        <StatusBadge label={options.orderStatuses.get(row.orderStatusId ?? -1) ?? "—"} tone="neutral" />
-      ),
+      cell: (row) => {
+        const status = getStatus(options.orderStatuses, row.orderStatus);
+        return <StatusBadge label={status?.label ?? "—"} customColor={status?.color} tone="neutral" />;
+      },
       sortable: true,
-      sortAccessor: (row) => options.orderStatuses.get(row.orderStatusId ?? -1) ?? "",
+      sortAccessor: (row) => getStatus(options.orderStatuses, row.orderStatus)?.label ?? "",
     },
     {
       id: "paymentStatus",
       header: "Статус оплаты",
-      cell: (row) => (
-        <StatusBadge label={options.paymentStatuses.get(row.paymentStatusId ?? -1) ?? "—"} tone="neutral" />
-      ),
+      cell: (row) => {
+        const status = getStatus(options.paymentStatuses, row.paymentStatus);
+        return <StatusBadge label={status?.label ?? "—"} customColor={status?.color} tone="neutral" />;
+      },
       sortable: true,
-      sortAccessor: (row) => options.paymentStatuses.get(row.paymentStatusId ?? -1) ?? "",
+      sortAccessor: (row) => getStatus(options.paymentStatuses, row.paymentStatus)?.label ?? "",
     },
     {
-      id: "assemblyStatus",
+      id: "deliveryStatus",
       header: "Статус сборки",
-      cell: (row) => (
-        <StatusBadge
-          label={row.assemblyStatusId ? options.assemblyStatuses.get(row.assemblyStatusId) ?? "—" : "—"}
-          tone="neutral"
-        />
-      ),
+      cell: (row) => {
+        const status = getStatus(options.deliveryStatuses, row.deliveryStatus);
+        return <StatusBadge label={status?.label ?? "—"} customColor={status?.color} tone="neutral" />;
+      },
       sortable: true,
-      sortAccessor: (row) => (row.assemblyStatusId ? options.assemblyStatuses.get(row.assemblyStatusId) ?? "" : ""),
+      sortAccessor: (row) => getStatus(options.deliveryStatuses, row.deliveryStatus)?.label ?? "",
     },
     {
       id: "total",
@@ -148,11 +163,6 @@ export function OrdersTable({
       sortAccessor: (row) => row.remainingAmount ?? null,
     },
     {
-      id: "responsible",
-      header: "Ответственный",
-      cell: (row) => <span className="text-sm">{row.responsibleUserId ? `#${row.responsibleUserId}` : "—"}</span>,
-    },
-    {
       id: "createdAt",
       header: "Создано",
       cell: (row) => <span className="text-sm text-muted-foreground">{formatDate(row.createdAt)}</span>,
@@ -165,18 +175,18 @@ export function OrdersTable({
       width: 56,
       align: "right",
       cell: (row) => (
-        <Button
+          <Button
           data-row-action="true"
-          size="icon"
-          variant="ghost"
-          onClick={(e) => {
-            e.stopPropagation();
-            onRowClick(row);
-          }}
-          aria-label="Редактировать заказ"
-        >
-          <Pencil className="h-4 w-4" />
-        </Button>
+            size="icon"
+            variant="ghost"
+            onClick={(e) => {
+              e.stopPropagation();
+              onRowClick(row);
+            }}
+            aria-label="Редактировать заказ"
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
       ),
     },
   ];
@@ -213,7 +223,7 @@ export function OrdersTable({
           return;
         }
 
-        if (sort.columnId === "orderStatus" || sort.columnId === "paymentStatus" || sort.columnId === "assemblyStatus") {
+        if (sort.columnId === "orderStatus" || sort.columnId === "paymentStatus" || sort.columnId === "deliveryStatus") {
           setLocalSortState(sort);
           return;
         }

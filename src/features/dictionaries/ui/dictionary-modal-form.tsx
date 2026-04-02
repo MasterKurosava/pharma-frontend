@@ -20,9 +20,10 @@ type DictionaryModalFormProps = {
   resource: DictionaryResourceName;
   mode: "create" | "edit";
   initialItem?: DictionaryItem | null;
+  readOnly?: boolean;
 };
 
-export function DictionaryModalForm({ open, onOpenChange, resource, mode, initialItem }: DictionaryModalFormProps) {
+export function DictionaryModalForm({ open, onOpenChange, resource, mode, initialItem, readOnly = false }: DictionaryModalFormProps) {
   const config = getSimpleDictionaryConfig(resource);
 
   const schema = useMemo(() => getDictionaryFormSchema(resource), [resource]);
@@ -31,9 +32,10 @@ export function DictionaryModalForm({ open, onOpenChange, resource, mode, initia
     () => ({
       label: initialItem?.name ?? initialItem?.label ?? "",
       code: config.supportsCode ? initialItem?.code ?? "" : undefined,
+      color: config.supportsColor ? initialItem?.color ?? "#64748B" : undefined,
       isActive: config.supportsActive ? initialItem?.isActive ?? true : undefined,
     }),
-    [config.supportsActive, config.supportsCode, initialItem],
+    [config.supportsActive, config.supportsCode, config.supportsColor, initialItem],
   );
 
   const form = useForm<DictionaryFormValues>({
@@ -52,20 +54,23 @@ export function DictionaryModalForm({ open, onOpenChange, resource, mode, initia
 
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
 
-  const title = mode === "create" ? `Create ${config.singularLabel}` : `Edit ${config.singularLabel}`;
-  const submitLabel = mode === "create" ? "Create" : "Save changes";
+  const title = mode === "create" ? `Создать ${config.singularLabel}` : `Редактировать ${config.singularLabel}`;
+  const submitLabel = mode === "create" ? "Создать" : "Сохранить";
 
   const onSubmit = async (values: DictionaryFormValues) => {
+    if (readOnly) return;
+
     try {
       if (mode === "create") {
         const payload: DictionaryCreateDto = {
           name: values.label,
           code: config.supportsCode ? values.code : undefined,
+          color: config.supportsColor ? values.color : undefined,
           isActive: config.supportsActive ? values.isActive : undefined,
         };
 
         await createMutation.mutateAsync(payload);
-        toast.success(`${config.singularLabel} created`);
+        toast.success(`${config.singularLabel} создан`);
         onOpenChange(false);
         return;
       }
@@ -75,15 +80,16 @@ export function DictionaryModalForm({ open, onOpenChange, resource, mode, initia
       const payload: DictionaryUpdateDto = {
         name: values.label,
         code: config.supportsCode ? values.code : undefined,
+        color: config.supportsColor ? values.color : undefined,
         isActive: config.supportsActive ? values.isActive : undefined,
       };
 
       await updateMutation.mutateAsync({ id: initialItem.id, dto: payload });
-      toast.success(`${config.singularLabel} updated`);
+      toast.success(`${config.singularLabel} обновлен`);
       onOpenChange(false);
     } catch (error) {
       // Errors for mutations are already toasted in hooks, but keep a fallback for unexpected shapes.
-      toast.error(getApiErrorMessage(error, "Something went wrong"));
+      toast.error(getApiErrorMessage(error, "Что-то пошло не так"));
     }
   };
 
@@ -92,20 +98,20 @@ export function DictionaryModalForm({ open, onOpenChange, resource, mode, initia
       open={open}
       onOpenChange={onOpenChange}
       title={title}
-      description={mode === "create" ? `Add a new ${config.singularLabel.toLowerCase()}.` : `Update ${config.singularLabel.toLowerCase()} details.`}
+      description={mode === "create" ? `Добавить новый ${config.singularLabel.toLowerCase()}.` : `Обновить детали ${config.singularLabel.toLowerCase()}.`}
       footer={
         <div className="flex items-center justify-between gap-4">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
-            Cancel
+            Отмена
           </Button>
           <Button
             onClick={() => {
               void form.handleSubmit(onSubmit)();
             }}
-            disabled={isSubmitting}
+            disabled={isSubmitting || readOnly}
             className="min-w-28"
           >
-            {isSubmitting ? "Working..." : submitLabel}
+            {readOnly ? "Только просмотр" : isSubmitting ? "Работа..." : submitLabel}
           </Button>
         </div>
       }
@@ -113,9 +119,9 @@ export function DictionaryModalForm({ open, onOpenChange, resource, mode, initia
       <div className="space-y-4">
         <div className="space-y-1.5">
           <label className="text-sm font-medium" htmlFor="dict-label">
-            Name
+            Название
           </label>
-          <Input id="dict-label" placeholder={`${config.singularLabel} name`} {...form.register("label")} />
+          <Input id="dict-label" placeholder={`${config.singularLabel} название`} {...form.register("label")} disabled={readOnly} />
             {form.formState.errors.label ? (
               <p className="text-xs text-destructive">{String(form.formState.errors.label.message)}</p>
             ) : null}
@@ -124,11 +130,32 @@ export function DictionaryModalForm({ open, onOpenChange, resource, mode, initia
         {config.supportsCode ? (
           <div className="space-y-1.5">
             <label className="text-sm font-medium" htmlFor="dict-code">
-              Code
+              Код
             </label>
-            <Input id="dict-code" placeholder="e.g. US" {...form.register("code")} />
+            <Input id="dict-code" placeholder="e.g. US" {...form.register("code")} disabled={readOnly} />
             {form.formState.errors.code ? (
               <p className="text-xs text-destructive">{String(form.formState.errors.code.message)}</p>
+            ) : null}
+          </div>
+        ) : null}
+
+        {config.supportsColor ? (
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium" htmlFor="dict-color">
+              Цвет
+            </label>
+            <div className="flex items-center gap-3">
+              <Input id="dict-color" type="color" {...form.register("color")} disabled={readOnly} className="h-10 w-16 p-1" />
+              <Input
+                id="dict-color-text"
+                placeholder="#22C55E"
+                value={form.watch("color") ?? ""}
+                onChange={(e) => form.setValue("color", e.target.value, { shouldValidate: true })}
+                disabled={readOnly}
+              />
+            </div>
+            {form.formState.errors.color ? (
+              <p className="text-xs text-destructive">{String(form.formState.errors.color.message)}</p>
             ) : null}
           </div>
         ) : null}
@@ -136,8 +163,8 @@ export function DictionaryModalForm({ open, onOpenChange, resource, mode, initia
         {config.supportsActive ? (
           <div className="flex items-center justify-between rounded-xl border bg-card p-3">
             <div className="space-y-0.5">
-              <p className="text-sm font-medium">Active</p>
-              <p className="text-xs text-muted-foreground">Visible in the system</p>
+              <p className="text-sm font-medium">Активный</p>
+              <p className="text-xs text-muted-foreground">Видимый в системе</p>
             </div>
             <Controller
               control={form.control}
@@ -150,6 +177,7 @@ export function DictionaryModalForm({ open, onOpenChange, resource, mode, initia
                     field.value ? "bg-primary" : "bg-background",
                   )}
                   checked={Boolean(field.value)}
+                  disabled={readOnly}
                   onChange={(e) => field.onChange(e.target.checked)}
                 />
               )}

@@ -15,13 +15,10 @@ type OrderPreviewDrawerProps = {
   orderId?: number;
   options: {
     countries: Map<number, string>;
-    cities: Map<number, string>;
-    clients: Map<number, string>;
-    paymentStatuses: Map<number, string>;
-    orderStatuses: Map<number, string>;
-    assemblyStatuses: Map<number, string>;
+    paymentStatuses: Map<string, string>;
+    orderStatuses: Map<string, string>;
+    deliveryStatuses: Map<string, string>;
     storagePlaces: Map<number, string>;
-    deliveryCompanies: Map<number, string>;
   };
   orderDetail?: Order;
   isLoading: boolean;
@@ -73,16 +70,15 @@ export function OrderPreviewDrawer({
             <h3 className="text-sm font-semibold">Основное</h3>
             <div className="mt-3 grid gap-3 md:grid-cols-2">
               <div>
-                <p className="text-xs text-muted-foreground">Клиент</p>
-                <p className="mt-1 text-sm font-medium">{orderDetail.client?.name ?? options.clients.get(orderDetail.clientId ?? -1) ?? `#${orderDetail.clientId ?? "—"}`}</p>
-                <p className="text-xs text-muted-foreground">{orderDetail.client?.phone ?? ""}</p>
+                <p className="text-xs text-muted-foreground">Телефон клиента</p>
+                <p className="mt-1 text-sm font-medium">{orderDetail.clientPhone ?? "—"}</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Адрес</p>
                 <p className="mt-1 text-sm font-medium">{orderDetail.address ?? "—"}</p>
                 <p className="text-xs text-muted-foreground">
                   {(options.countries.get(orderDetail.countryId ?? -1) ?? null) ? `${options.countries.get(orderDetail.countryId ?? -1)}` : ""}
-                  {orderDetail.cityId ? `, ${options.cities.get(orderDetail.cityId) ?? "—"}` : ""}
+                  {orderDetail.city ? `, ${orderDetail.city}` : ""}
                 </p>
               </div>
             </div>
@@ -94,21 +90,21 @@ export function OrderPreviewDrawer({
               <div className="space-y-2">
                 <p className="text-xs text-muted-foreground">Статус заказа</p>
                 <StatusBadge
-                  label={options.orderStatuses.get(orderDetail.orderStatusId ?? -1) ?? "—"}
+                  label={orderDetail.orderStatus ? options.orderStatuses.get(orderDetail.orderStatus) ?? "—" : "—"}
                   tone="neutral"
                 />
               </div>
               <div className="space-y-2">
                 <p className="text-xs text-muted-foreground">Статус оплаты</p>
                 <StatusBadge
-                  label={options.paymentStatuses.get(orderDetail.paymentStatusId ?? -1) ?? "—"}
+                  label={orderDetail.paymentStatus ? options.paymentStatuses.get(orderDetail.paymentStatus) ?? "—" : "—"}
                   tone="neutral"
                 />
               </div>
               <div className="space-y-2">
                 <p className="text-xs text-muted-foreground">Статус сборки</p>
                 <StatusBadge
-                  label={orderDetail.assemblyStatusId ? options.assemblyStatuses.get(orderDetail.assemblyStatusId) ?? "—" : "—"}
+                  label={orderDetail.deliveryStatus ? options.deliveryStatuses.get(orderDetail.deliveryStatus) ?? "—" : "—"}
                   tone="neutral"
                 />
               </div>

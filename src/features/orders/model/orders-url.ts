@@ -1,4 +1,5 @@
 import type { OrderSortBy, OrderSortOrder } from "@/entities/order/api/order-types";
+import type { DeliveryStatusCode, OrderStatusCode, PaymentStatusCode } from "@/shared/config/order-static";
 
 export const ordersUrlDefaults = {
   page: 1,
@@ -13,15 +14,13 @@ export type OrdersDrawerState = {
 
 export type OrdersFiltersState = {
   search?: string;
-  clientId?: number;
+  clientPhone?: string;
   countryId?: number;
-  cityId?: number;
-  responsibleUserId?: number;
-  paymentStatusId?: number;
-  orderStatusId?: number;
-  assemblyStatusId?: number;
+  city?: string;
+  paymentStatus?: PaymentStatusCode;
+  orderStatus?: OrderStatusCode;
   storagePlaceId?: number;
-  deliveryCompanyId?: number;
+  deliveryStatus?: DeliveryStatusCode;
   dateFrom?: string;
   dateTo?: string;
 };
@@ -68,15 +67,13 @@ export function parseOrdersSearchParams(searchParams: URLSearchParams): OrdersLi
   return {
     drawerOrderId: parseIntOrUndefined(searchParams.get("orderId")),
     search: searchParams.get("search")?.trim() ? searchParams.get("search")!.trim() : undefined,
-    clientId: parseIntOrUndefined(searchParams.get("clientId")),
+    clientPhone: searchParams.get("clientPhone")?.trim() ? searchParams.get("clientPhone")!.trim() : undefined,
     countryId: parseIntOrUndefined(searchParams.get("countryId")),
-    cityId: parseIntOrUndefined(searchParams.get("cityId")),
-    responsibleUserId: parseIntOrUndefined(searchParams.get("responsibleUserId")),
-    paymentStatusId: parseIntOrUndefined(searchParams.get("paymentStatusId")),
-    orderStatusId: parseIntOrUndefined(searchParams.get("orderStatusId")),
-    assemblyStatusId: parseIntOrUndefined(searchParams.get("assemblyStatusId")),
+    city: searchParams.get("city")?.trim() ? searchParams.get("city")!.trim() : undefined,
+    paymentStatus: (searchParams.get("paymentStatus") as PaymentStatusCode | null) ?? undefined,
+    orderStatus: (searchParams.get("orderStatus") as OrderStatusCode | null) ?? undefined,
     storagePlaceId: parseIntOrUndefined(searchParams.get("storagePlaceId")),
-    deliveryCompanyId: parseIntOrUndefined(searchParams.get("deliveryCompanyId")),
+    deliveryStatus: (searchParams.get("deliveryStatus") as DeliveryStatusCode | null) ?? undefined,
     dateFrom: parseDate(searchParams.get("dateFrom")),
     dateTo: parseDate(searchParams.get("dateTo")),
     page: page >= 1 ? page : ordersUrlDefaults.page,
@@ -94,18 +91,16 @@ export function serializeOrdersSearchParams(state: OrdersListUrlState): URLSearc
   sp.set("sortBy", state.sortBy);
   sp.set("sortOrder", state.sortOrder);
 
-  if (state.drawerOrderId) sp.set("orderId", String(state.drawerOrderId));
+  if (typeof state.drawerOrderId !== "undefined") sp.set("orderId", String(state.drawerOrderId));
 
   if (state.search) sp.set("search", state.search);
-  if (state.clientId) sp.set("clientId", String(state.clientId));
+  if (state.clientPhone) sp.set("clientPhone", state.clientPhone);
   if (state.countryId) sp.set("countryId", String(state.countryId));
-  if (state.cityId) sp.set("cityId", String(state.cityId));
-  if (state.responsibleUserId) sp.set("responsibleUserId", String(state.responsibleUserId));
-  if (state.paymentStatusId) sp.set("paymentStatusId", String(state.paymentStatusId));
-  if (state.orderStatusId) sp.set("orderStatusId", String(state.orderStatusId));
-  if (state.assemblyStatusId) sp.set("assemblyStatusId", String(state.assemblyStatusId));
+  if (state.city) sp.set("city", state.city);
+  if (state.paymentStatus) sp.set("paymentStatus", state.paymentStatus);
+  if (state.orderStatus) sp.set("orderStatus", state.orderStatus);
   if (state.storagePlaceId) sp.set("storagePlaceId", String(state.storagePlaceId));
-  if (state.deliveryCompanyId) sp.set("deliveryCompanyId", String(state.deliveryCompanyId));
+  if (state.deliveryStatus) sp.set("deliveryStatus", state.deliveryStatus);
   if (state.dateFrom) sp.set("dateFrom", state.dateFrom);
   if (state.dateTo) sp.set("dateTo", state.dateTo);
 

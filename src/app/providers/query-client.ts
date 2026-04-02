@@ -12,3 +12,5 @@ export const queryClient = new QueryClient({
     },
   },
 });
+
+export const QUERY_CACHE_PERSIST_MAX_AGE_MS = 1000 * 60 * 60 * 24;

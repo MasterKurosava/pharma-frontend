@@ -10,45 +10,43 @@ import { Input } from "@/shared/ui/input";
 import { NativeSelect } from "@/shared/ui/native-select/native-select";
 import { DrawerFormSkeleton } from "@/shared/ui/skeleton/skeleton";
 import { ErrorState } from "@/shared/ui/error-state";
+import { cn } from "@/shared/lib/utils";
 
 import { useDictionaryOptionsQuery } from "@/features/dictionaries/model/use-dictionary-options";
-import { useCitiesQuery } from "@/features/cities/api/city-crud-hooks";
-import { useClientsQuery } from "@/features/clients/api/client-crud-hooks";
 import { useProductsQuery } from "@/features/products/api/product-crud-hooks";
 
-import { useOrderDetailQuery, useOrderHistoryQuery } from "@/features/orders/api/orders-queries";
-import { useUpdateOrderMutation } from "@/features/orders/api/order-save-mutations";
+import { useOrderDetailQuery } from "@/features/orders/api/orders-queries";
+import { useCreateOrderMutation, useUpdateOrderMutation } from "@/features/orders/api/order-save-mutations";
 import { orderFormSchema, type OrderFormValues } from "@/features/orders/model/order-form-schema";
-import { orderApiToFormValues, orderFormValuesToUpdateDto } from "@/features/orders/model/order-mappers";
+import { orderApiToFormValues, orderFormValuesToCreateDto, orderFormValuesToUpdateDto } from "@/features/orders/model/order-mappers";
+import { useAuth } from "@/features/auth/model/use-auth";
+import { DELIVERY_STATUS_OPTIONS, ORDER_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from "@/shared/config/order-static";
 
 import { OrderDrawerHeader } from "@/widgets/orders/order-drawer/order-drawer-header";
 import { OrderFormSection } from "@/widgets/orders/order-drawer/order-form-section";
 import { OrderItemsEditor } from "@/widgets/orders/order-drawer/order-items-editor";
 import { OrderFinanceBlock } from "@/widgets/orders/order-drawer/order-finance-block";
-import { OrderHistoryPanel } from "@/widgets/orders/order-drawer/order-history-panel";
 import { toast } from "sonner";
 
 type OrderDrawerEditorProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   orderId?: number | string;
+  onCreated?: (orderId: number) => void;
 };
 
 const emptyOrderFormValues = (): OrderFormValues => ({
-  clientId: 0,
+  clientPhone: "",
   countryId: 0,
-  cityId: 0,
+  city: "",
   address: "",
 
-  deliveryCompanyId: 0,
-  deliveryTypeId: 0,
+  deliveryStatus: DELIVERY_STATUS_OPTIONS[0].value,
   deliveryPrice: 0,
   storagePlaceId: 0,
 
-  paymentStatusId: 0,
-  orderStatusId: 0,
-  assemblyStatusId: 0,
-  responsibleUserId: 0,
+  paymentStatus: PAYMENT_STATUS_OPTIONS[0].value,
+  orderStatus: ORDER_STATUS_OPTIONS[0].value,
 
   paidAmount: 0,
   description: "",
@@ -64,12 +62,31 @@ function formatMoney(value?: number | null) {
   return new Intl.NumberFormat("ru-RU", { style: "currency", currency: "KZT", maximumFractionDigits: 0 }).format(value);
 }
 
-export function OrderDrawerEditor({ open, onOpenChange, orderId }: OrderDrawerEditorProps) {
-  const orderDetailQuery = useOrderDetailQuery(orderId);
-  const orderHistoryQuery = useOrderHistoryQuery(orderId);
+function getProductUnitPrice(product: unknown): number {
+  if (!product || typeof product !== "object") return 0;
+
+  const record = product as Record<string, unknown>;
+  const priceCandidate =
+    record.price ??
+    record.unitPrice ??
+    record.salePrice ??
+    record.sellingPrice ??
+    record.retailPrice ??
+    record.purchasePrice ??
+    0;
+
+  const numeric = Number(priceCandidate);
+  return Number.isFinite(numeric) ? numeric : 0;
+}
+
+export function OrderDrawerEditor({ open, onOpenChange, orderId, onCreated }: OrderDrawerEditorProps) {
+  const { user } = useAuth();
+  const isCreateMode = Number(orderId ?? 0) === 0;
+  const orderDetailQuery = useOrderDetailQuery(isCreateMode ? undefined : orderId);
+  const createOrderMutation = useCreateOrderMutation();
   const updateOrderMutation = useUpdateOrderMutation();
 
-  const isEditLoading = (orderDetailQuery.isPending || orderHistoryQuery.isPending) && open;
+  const isEditLoading = !isCreateMode && orderDetailQuery.isPending && open;
 
   const serverValuesRef = useRef<OrderFormValues>(emptyOrderFormValues());
   const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
@@ -88,25 +105,25 @@ export function OrderDrawerEditor({ open, onOpenChange, orderId }: OrderDrawerEd
     name: "items",
   });
 
-  const watchedCountryId = useWatch({ control: form.control, name: "countryId" });
-  const watchedOrderStatusId = useWatch({ control: form.control, name: "orderStatusId" });
+  const watchedOrderStatus = useWatch({ control: form.control, name: "orderStatus" });
   const watchedItems = useWatch({ control: form.control, name: "items" });
+  const watchedDeliveryPrice = useWatch({ control: form.control, name: "deliveryPrice" });
+  const watchedPaidAmount = useWatch({ control: form.control, name: "paidAmount" });
 
   const countriesSelect = useDictionaryOptionsQuery("countries", { includeCodeInLabel: true });
-  const paymentStatusOptions = useDictionaryOptionsQuery("payment-statuses", { includeCodeInLabel: false });
-  const orderStatusOptions = useDictionaryOptionsQuery("order-statuses", { includeCodeInLabel: false });
-  const assemblyStatusOptions = useDictionaryOptionsQuery("assembly-statuses", { includeCodeInLabel: false });
-  const deliveryCompaniesOptions = useDictionaryOptionsQuery("delivery-companies", { includeCodeInLabel: false });
-  const deliveryTypesOptions = useDictionaryOptionsQuery("delivery-types", { includeCodeInLabel: false });
+  const paymentStatusOptions = useMemo(
+    () => PAYMENT_STATUS_OPTIONS.map((item) => ({ value: item.value, label: item.label })),
+    [],
+  );
+  const orderStatusOptions = useMemo(
+    () => ORDER_STATUS_OPTIONS.map((item) => ({ value: item.value, label: item.label })),
+    [],
+  );
+  const deliveryStatusOptions = useMemo(
+    () => DELIVERY_STATUS_OPTIONS.map((item) => ({ value: item.value, label: item.label })),
+    [],
+  );
   const storagePlacesOptions = useDictionaryOptionsQuery("storage-places", { includeCodeInLabel: false });
-
-  const citiesQuery = useCitiesQuery({
-    countryId: watchedCountryId || undefined,
-    isActive: true,
-    search: undefined,
-  });
-
-  const clientsQuery = useClientsQuery({ search: undefined, clientStatusId: undefined });
 
   const productsQuery = useProductsQuery({ isActive: true });
 
@@ -119,41 +136,90 @@ export function OrderDrawerEditor({ open, onOpenChange, orderId }: OrderDrawerEd
     }));
   }, [productsQuery.data]);
 
-  const productAvailableById = useMemo(() => {
-    const products = productsQuery.data ?? [];
-    return new Map<number, number>(products.map((p) => [p.id, p.availableQuantity]));
-  }, [productsQuery.data]);
-
-  const cityOptions = useMemo(() => {
-    const items = citiesQuery.data ?? [];
-    return items.map((c) => ({ value: c.id, label: c.name }));
-  }, [citiesQuery.data]);
-
-  const clientOptions = useMemo(() => {
-    const items = clientsQuery.data ?? [];
-    return items.map((c) => ({
-      value: c.id,
-      label: c.phone ? `${c.name} (${c.phone})` : c.name,
-    }));
-  }, [clientsQuery.data]);
-
-  const orderStatusLabelMap = useMemo(() => new Map(orderStatusOptions.options.map((o) => [o.value, o.label])), [orderStatusOptions.options]);
+  const orderStatusLabelMap = useMemo(() => new Map(orderStatusOptions.map((o) => [o.value, o.label])), [orderStatusOptions]);
 
   const isReadonlyOrder = useMemo(() => {
-    const label = orderStatusLabelMap.get(watchedOrderStatusId) ?? "";
+    const label = orderStatusLabelMap.get(watchedOrderStatus as (typeof ORDER_STATUS_OPTIONS)[number]["value"]) ?? "";
     const lowered = label.toLowerCase();
     return lowered.includes("отмен") || lowered.includes("закры") || lowered.includes("cancel");
-  }, [orderStatusLabelMap, watchedOrderStatusId]);
+  }, [orderStatusLabelMap, watchedOrderStatus]);
+
+  const isOrderDraftStage = watchedOrderStatus === "ORDER";
+  const isDeliveryPrepStage = watchedOrderStatus === "DELIVERY_REGISTRATION";
+  const isAddressRequiredStage = watchedOrderStatus === "ADDRESS_REQUIRED";
+  const isAssemblyRequiredStage = watchedOrderStatus === "ASSEMBLY_REQUIRED";
+  const showAdvancedDeliveryFields =
+    isAssemblyRequiredStage || (!isOrderDraftStage && !isDeliveryPrepStage && !isAddressRequiredStage);
+
+  const editableFields = useMemo(
+    () => new Set(user?.accessPolicy?.orders.editableFields ?? []),
+    [user?.accessPolicy?.orders.editableFields],
+  );
+  const fixedFilters = user?.accessPolicy?.orders.fixedFilters;
+  const canEditField = (field: string) => editableFields.has(field as never);
+
+  const productPriceMap = useMemo(() => {
+    const map = new Map<number, number>();
+    for (const product of productsQuery.data ?? []) {
+      map.set(product.id, getProductUnitPrice(product));
+    }
+    return map;
+  }, [productsQuery.data]);
 
   useEffect(() => {
     if (!open) return;
+
+    if (isCreateMode) {
+      const defaults = emptyOrderFormValues();
+      serverValuesRef.current = defaults;
+      form.reset(defaults);
+      return;
+    }
 
     if (orderDetailQuery.data) {
       const mapped = orderApiToFormValues(orderDetailQuery.data);
       serverValuesRef.current = mapped;
       form.reset(mapped);
     }
-  }, [form, open, orderDetailQuery.data]);
+  }, [form, isCreateMode, open, orderDetailQuery.data]);
+
+  useEffect(() => {
+    if (!open) return;
+    if (fixedFilters?.countryId !== undefined) {
+      form.setValue("countryId", fixedFilters.countryId, { shouldDirty: false });
+    }
+  }, [fixedFilters?.countryId, form, open]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const items = watchedItems ?? [];
+    const itemTotal = items.reduce((sum, item) => {
+      const productId = Number(item?.productId ?? 0);
+      const quantity = Number(item?.quantity ?? 0);
+      if (!Number.isFinite(productId) || productId <= 0 || !Number.isFinite(quantity) || quantity <= 0) return sum;
+
+      const unitPrice = productPriceMap.get(productId) ?? 0;
+      return sum + unitPrice * quantity;
+    }, 0);
+
+    const deliveryPrice = Number.isFinite(Number(watchedDeliveryPrice)) ? Number(watchedDeliveryPrice) : 0;
+    const paidAmount = Number.isFinite(Number(watchedPaidAmount)) ? Number(watchedPaidAmount) : 0;
+
+    const nextTotalPrice = Math.max(0, itemTotal + deliveryPrice);
+    const nextRemainingAmount = Math.max(0, nextTotalPrice - paidAmount);
+
+    const currentTotal = form.getValues("totalPrice");
+    const currentRemaining = form.getValues("remainingAmount");
+
+    if (currentTotal !== nextTotalPrice) {
+      form.setValue("totalPrice", nextTotalPrice, { shouldDirty: false, shouldValidate: true });
+    }
+
+    if (currentRemaining !== nextRemainingAmount) {
+      form.setValue("remainingAmount", nextRemainingAmount, { shouldDirty: false, shouldValidate: true });
+    }
+  }, [form, open, productPriceMap, watchedDeliveryPrice, watchedItems, watchedPaidAmount]);
 
   const onAttemptClose = () => {
     if (!form.formState.isDirty) {
@@ -174,29 +240,48 @@ export function OrderDrawerEditor({ open, onOpenChange, orderId }: OrderDrawerEd
     onAttemptClose();
   };
 
-  const isSubmitting = updateOrderMutation.isPending;
+  const isSubmitting = updateOrderMutation.isPending || createOrderMutation.isPending;
   const isDirty = form.formState.isDirty;
   const isValid = form.formState.isValid;
+  const showValidation = form.formState.submitCount > 0;
 
-  const canSave = isDirty && isValid && !isSubmitting && open && !isReadonlyOrder;
+  const clientPhoneError = showValidation ? form.formState.errors.clientPhone : undefined;
+  const countryError = showValidation ? form.formState.errors.countryId : undefined;
+  const cityError = showValidation ? form.formState.errors.city : undefined;
+  const addressError = showValidation ? form.formState.errors.address : undefined;
+  const paymentStatusError = showValidation ? form.formState.errors.paymentStatus : undefined;
+  const orderStatusError = showValidation ? form.formState.errors.orderStatus : undefined;
+
+  const canSave = (isCreateMode || isDirty) && isValid && !isSubmitting && open && !isReadonlyOrder && editableFields.size > 0;
 
   const submit = async (values: OrderFormValues) => {
-    if (!orderId) return;
-
     if (isReadonlyOrder) return;
 
-    const dto = orderFormValuesToUpdateDto(values);
-    await updateOrderMutation.mutateAsync({ id: orderId, dto });
-
-    const latest = await orderDetailQuery.refetch();
-    if (latest.data) {
-      const mapped = orderApiToFormValues(latest.data);
+    if (isCreateMode) {
+      const createDto = orderFormValuesToCreateDto(values);
+      const createdOrder = await createOrderMutation.mutateAsync(createDto);
+      const mapped = orderApiToFormValues(createdOrder);
       serverValuesRef.current = mapped;
       form.reset(mapped, { keepErrors: false });
+      onCreated?.(createdOrder.id);
+      toast.success("Заказ создан");
+      return;
     }
 
-    // refresh history as it depends on unified save
-    await orderHistoryQuery.refetch();
+    if (!orderId) return;
+    const dto = orderFormValuesToUpdateDto(values);
+    const sanitizedDto = Object.fromEntries(
+      Object.entries(dto).filter(([key, value]) => value !== undefined && canEditField(key)),
+    );
+    if (Object.keys(sanitizedDto).length === 0) {
+      toast.error("Недостаточно прав для сохранения изменений");
+      return;
+    }
+    const updatedOrder = await updateOrderMutation.mutateAsync({ id: orderId, dto: sanitizedDto });
+    const mapped = orderApiToFormValues(updatedOrder);
+    serverValuesRef.current = mapped;
+    form.reset(mapped, { keepErrors: false });
+
     toast.success("Заказ сохранен");
   };
 
@@ -243,89 +328,154 @@ export function OrderDrawerEditor({ open, onOpenChange, orderId }: OrderDrawerEd
     </div>
   );
 
-  const currentOrderStatusLabel = orderStatusLabelMap.get(watchedOrderStatusId);
-
   return (
     <>
       <DrawerFormLayout
         open={open}
         onOpenChange={handleOpenChange}
-        title={orderDetailQuery.data ? `Заказ #${orderDetailQuery.data.id}` : "Редактирование заказа"}
+        title={isCreateMode ? "Создание заказа" : orderDetailQuery.data ? `Заказ #${orderDetailQuery.data.id}` : "Редактирование заказа"}
         footer={footer}
         isDirty={isDirty}
         isSubmitting={isSubmitting}
         side="right"
         hideShellHeader
         className="w-[92vw] max-w-[860px]"
-        contentClassName="px-0"
+        contentClassName="px-0 bg-muted/40"
         footerClassName="px-6 py-3"
       >
         {isEditLoading ? (
           <DrawerFormSkeleton />
-        ) : orderDetailQuery.data ? (
-          <div className="min-h-full bg-background">
+        ) : orderDetailQuery.data || isCreateMode ? (
+          <div className="min-h-full bg-muted/40">
             <OrderDrawerHeader
-              orderId={orderDetailQuery.data.id}
-              orderStatusLabel={currentOrderStatusLabel}
-              readonlyOrder={isReadonlyOrder}
+              orderId={orderDetailQuery.data?.id}
+              isCreateMode={isCreateMode}
               onClose={onAttemptClose}
             />
 
             <form className="pb-6">
-              <OrderFormSection title="Основное">
+              <OrderFormSection>
                 <div className="grid gap-4 md:grid-cols-2">
                   <Controller
                     control={form.control}
-                    name="clientId"
+                    name="clientPhone"
                     render={({ field }) => (
                       <div className="space-y-1.5">
-                        <label className="text-sm font-medium">Клиент</label>
-                        <NativeSelect
+                        <label className="text-sm font-medium">Телефон клиента</label>
+                        <Input
                           value={field.value}
-                          options={clientOptions}
-                          onValueChange={(next) => field.onChange(next === "" ? 0 : next)}
-                          placeholder="Выберите клиента"
-                          disabled={isSubmitting || isReadonlyOrder}
+                          onChange={(e) => field.onChange(e.target.value)}
+                          placeholder="+7701..."
+                          className={cn("bg-white", clientPhoneError ? "border-destructive ring-destructive/30" : null)}
+                          disabled={isSubmitting || isReadonlyOrder || !canEditField("clientPhone")}
                         />
+                        {clientPhoneError ? <p className="text-xs text-destructive">{String(clientPhoneError.message)}</p> : null}
                       </div>
                     )}
                   />
 
                   <Controller
                     control={form.control}
-                    name="countryId"
+                    name="orderStatus"
                     render={({ field }) => (
                       <div className="space-y-1.5">
-                        <label className="text-sm font-medium">Страна</label>
+                        <label className="text-sm font-medium">Статус заказа</label>
                         <NativeSelect
                           value={field.value}
-                          options={countriesSelect.options}
-                          onValueChange={(next) => field.onChange(next === "" ? 0 : next)}
-                          placeholder="Выберите страну"
-                          disabled={isSubmitting || isReadonlyOrder}
+                          options={orderStatusOptions}
+                          onValueChange={(next) => field.onChange(next)}
+                          placeholder="Не выбрано"
+                          className={cn(orderStatusError ? "border-destructive ring-destructive/30" : null)}
+                          disabled={isSubmitting || isReadonlyOrder || !canEditField("orderStatus")}
                         />
+                        {orderStatusError ? <p className="text-xs text-destructive">{String(orderStatusError.message)}</p> : null}
                       </div>
                     )}
                   />
+                </div>
+              </OrderFormSection>
 
-                  <Controller
-                    control={form.control}
-                    name="cityId"
-                    render={({ field }) => (
-                      <div className="space-y-1.5">
-                        <label className="text-sm font-medium">Город</label>
-                        <NativeSelect
-                          value={field.value}
-                          options={cityOptions}
-                          onValueChange={(next) => field.onChange(next === "" ? 0 : next)}
-                          placeholder="Выберите город"
-                          disabled={isSubmitting || isReadonlyOrder || citiesQuery.isPending}
-                        />
-                      </div>
-                    )}
-                  />
+              <OrderFormSection>
+                <OrderItemsEditor
+                  control={form.control}
+                  errors={form.formState.errors}
+                  fields={fields}
+                  productOptions={productsOptions}
+                  append={append}
+                  remove={remove}
+                  disabled={isSubmitting || isReadonlyOrder || !canEditField("items")}
+                />
+              </OrderFormSection>
 
-                  <div />
+              <OrderFormSection>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="md:col-span-2 grid gap-4 md:grid-cols-2">
+                    <Controller
+                      control={form.control}
+                      name="countryId"
+                      render={({ field }) => (
+                        <div className="space-y-1.5">
+                          <label className="text-sm font-medium">Страна</label>
+                          <NativeSelect
+                            value={field.value}
+                            options={countriesSelect.options}
+                            onValueChange={(next) => field.onChange(next === "" ? 0 : next)}
+                            placeholder="Выберите страну"
+                            className={cn(countryError ? "border-destructive ring-destructive/30" : null)}
+                            disabled={
+                              isSubmitting ||
+                              isReadonlyOrder ||
+                              !canEditField("countryId") ||
+                              fixedFilters?.countryId !== undefined
+                            }
+                          />
+                          {countryError ? <p className="text-xs text-destructive">{String(countryError.message)}</p> : null}
+                        </div>
+                      )}
+                    />
+
+                    <Controller
+                      control={form.control}
+                      name="city"
+                      render={({ field }) => (
+                        <div className="space-y-1.5">
+                          <label className="text-sm font-medium">Город</label>
+                          <Input
+                            value={field.value}
+                            onChange={(e) => field.onChange(e.target.value)}
+                            placeholder="Введите город"
+                            className={cn("bg-white", cityError ? "border-destructive ring-destructive/30" : null)}
+                            disabled={isSubmitting || isReadonlyOrder || !canEditField("city")}
+                          />
+                          {cityError ? <p className="text-xs text-destructive">{String(cityError.message)}</p> : null}
+                        </div>
+                      )}
+                    />
+
+                  </div>
+
+                  {showAdvancedDeliveryFields ? (
+                    <Controller
+                      control={form.control}
+                      name="deliveryPrice"
+                      render={({ field }) => (
+                        <div className="space-y-1.5 md:col-span-2">
+                          <label className="text-sm font-medium">Цена доставки</label>
+                          <Input
+                            type="number"
+                            min={0}
+                            value={field.value}
+                            onChange={(e) => {
+                              const n = Number(e.target.value);
+                              field.onChange(Number.isFinite(n) ? n : 0);
+                            }}
+                            className="bg-white"
+                            disabled={isSubmitting || isReadonlyOrder || !canEditField("deliveryPrice")}
+                          />
+                        </div>
+                      )}
+                    />
+                  ) : null}
 
                   <Controller
                     control={form.control}
@@ -337,204 +487,105 @@ export function OrderDrawerEditor({ open, onOpenChange, orderId }: OrderDrawerEd
                           value={field.value}
                           onChange={(e) => field.onChange(e.target.value)}
                           placeholder="Адрес доставки"
-                          disabled={isSubmitting || isReadonlyOrder}
+                          className={cn("bg-white", addressError ? "border-destructive focus-visible:ring-destructive/30" : null)}
+                          disabled={isSubmitting || isReadonlyOrder || !canEditField("address")}
                         />
+                        {addressError ? <p className="text-xs text-destructive">{String(addressError.message)}</p> : null}
                       </div>
                     )}
                   />
                 </div>
               </OrderFormSection>
 
-              <OrderFormSection title="Доставка">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <Controller
-                    control={form.control}
-                    name="deliveryCompanyId"
-                    render={({ field }) => (
-                      <div className="space-y-1.5">
-                        <label className="text-sm font-medium">Компания доставки</label>
-                        <NativeSelect
-                          value={field.value}
-                          options={[{ value: 0, label: "—" }, ...deliveryCompaniesOptions.options]}
-                          onValueChange={(next) => field.onChange(next === "" ? 0 : next)}
-                          placeholder="—"
-                          disabled={isSubmitting || isReadonlyOrder}
-                        />
-                      </div>
-                    )}
-                  />
+              {showAdvancedDeliveryFields ? (
+                <OrderFormSection>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <Controller
+                      control={form.control}
+                      name="storagePlaceId"
+                      render={({ field }) => (
+                        <div className="space-y-1.5">
+                          <label className="text-sm font-medium">Хранилище</label>
+                          <NativeSelect
+                            value={field.value === 0 ? "" : field.value}
+                            options={storagePlacesOptions.options}
+                            onValueChange={(next) => field.onChange(next === "" ? 0 : next)}
+                            placeholder="Не выбрано"
+                            disabled={isSubmitting || isReadonlyOrder || !canEditField("storagePlaceId")}
+                          />
+                        </div>
+                      )}
+                    />
+                  </div>
+                </OrderFormSection>
+              ) : null}
 
+              <OrderFormSection>
+                <div className="grid gap-4 md:grid-cols-3 mb-4">
                   <Controller
                     control={form.control}
-                    name="deliveryTypeId"
-                    render={({ field }) => (
-                      <div className="space-y-1.5">
-                        <label className="text-sm font-medium">Тип доставки</label>
-                        <NativeSelect
-                          value={field.value}
-                          options={[{ value: 0, label: "—" }, ...deliveryTypesOptions.options]}
-                          onValueChange={(next) => field.onChange(next === "" ? 0 : next)}
-                          placeholder="—"
-                          disabled={isSubmitting || isReadonlyOrder}
-                        />
-                      </div>
-                    )}
-                  />
-
-                  <Controller
-                    control={form.control}
-                    name="deliveryPrice"
-                    render={({ field }) => (
-                      <div className="space-y-1.5">
-                        <label className="text-sm font-medium">Цена доставки</label>
-                        <Input
-                          type="number"
-                          min={0}
-                          value={field.value}
-                          onChange={(e) => {
-                            const n = Number(e.target.value);
-                            field.onChange(Number.isFinite(n) ? n : 0);
-                          }}
-                          disabled={isSubmitting || isReadonlyOrder}
-                        />
-                      </div>
-                    )}
-                  />
-
-                  <Controller
-                    control={form.control}
-                    name="storagePlaceId"
-                    render={({ field }) => (
-                      <div className="space-y-1.5">
-                        <label className="text-sm font-medium">Хранилище</label>
-                        <NativeSelect
-                          value={field.value}
-                          options={[{ value: 0, label: "—" }, ...storagePlacesOptions.options]}
-                          onValueChange={(next) => field.onChange(next === "" ? 0 : next)}
-                          placeholder="—"
-                          disabled={isSubmitting || isReadonlyOrder}
-                        />
-                      </div>
-                    )}
-                  />
-                </div>
-              </OrderFormSection>
-
-              <OrderFormSection title="Статусы">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <Controller
-                    control={form.control}
-                    name="paymentStatusId"
+                    name="paymentStatus"
                     render={({ field }) => (
                       <div className="space-y-1.5">
                         <label className="text-sm font-medium">Статус оплаты</label>
                         <NativeSelect
                           value={field.value}
-                          options={paymentStatusOptions.options}
-                          onValueChange={(next) => field.onChange(next === "" ? 0 : next)}
-                          placeholder="—"
-                          disabled={isSubmitting || isReadonlyOrder}
+                          options={paymentStatusOptions}
+                          onValueChange={(next) => field.onChange(next)}
+                          placeholder="Не выбрано"
+                          className={cn(paymentStatusError ? "border-destructive ring-destructive/30" : null)}
+                          disabled={isSubmitting || isReadonlyOrder || !canEditField("paymentStatus")}
                         />
+                        {paymentStatusError ? (
+                          <p className="text-xs text-destructive">{String(paymentStatusError.message)}</p>
+                        ) : null}
                       </div>
                     )}
                   />
-
-                  <Controller
-                    control={form.control}
-                    name="orderStatusId"
-                    render={({ field }) => (
-                      <div className="space-y-1.5">
-                        <label className="text-sm font-medium">Статус заказа</label>
-                        <NativeSelect
-                          value={field.value}
-                          options={orderStatusOptions.options}
-                          onValueChange={(next) => field.onChange(next === "" ? 0 : next)}
-                          placeholder="—"
-                          disabled={isSubmitting || isReadonlyOrder}
-                        />
-                      </div>
-                    )}
-                  />
-
-                  <Controller
-                    control={form.control}
-                    name="assemblyStatusId"
-                    render={({ field }) => (
-                      <div className="space-y-1.5">
-                        <label className="text-sm font-medium">Статус сборки</label>
-                        <NativeSelect
-                          value={field.value}
-                          options={[{ value: 0, label: "—" }, ...assemblyStatusOptions.options]}
-                          onValueChange={(next) => field.onChange(next === "" ? 0 : next)}
-                          placeholder="—"
-                          disabled={isSubmitting || isReadonlyOrder}
-                        />
-                      </div>
-                    )}
-                  />
-
-                  <Controller
-                    control={form.control}
-                    name="responsibleUserId"
-                    render={({ field }) => (
-                      <div className="space-y-1.5">
-                        <label className="text-sm font-medium">Ответственный</label>
-                        <Input
-                          type="number"
-                          value={field.value}
-                          onChange={(e) => field.onChange(Number(e.target.value))}
-                          disabled
-                        />
-                        <p className="text-xs text-muted-foreground">Источник пользователей пока не подключен.</p>
-                      </div>
-                    )}
-                  />
+                  {showAdvancedDeliveryFields ? (
+                    <Controller
+                      control={form.control}
+                      name="deliveryStatus"
+                      render={({ field }) => (
+                        <div className="space-y-1.5">
+                          <label className="text-sm font-medium">Статус сборки</label>
+                          <NativeSelect
+                            value={field.value}
+                            options={deliveryStatusOptions}
+                            onValueChange={(next) => field.onChange(next)}
+                            placeholder="Не выбрано"
+                            disabled={isSubmitting || isReadonlyOrder || !canEditField("deliveryStatus")}
+                          />
+                        </div>
+                      )}
+                    />
+                  ) : null}
                 </div>
-              </OrderFormSection>
-
-              <OrderFormSection title="Товары">
-                <OrderItemsEditor
-                  control={form.control}
-                  errors={form.formState.errors}
-                  fields={fields}
-                  items={watchedItems}
-                  productOptions={productsOptions}
-                  productAvailableById={productAvailableById}
-                  append={append}
-                  remove={remove}
-                  disabled={isSubmitting || isReadonlyOrder}
-                />
-              </OrderFormSection>
-
-              <OrderFormSection title="Финансы">
                 <OrderFinanceBlock
                   control={form.control}
                   errors={form.formState.errors}
                   totalPrice={form.getValues().totalPrice}
                   remainingAmount={form.getValues().remainingAmount}
                   formatMoney={formatMoney}
-                  disabled={isSubmitting || isReadonlyOrder}
+                  disabled={isSubmitting || isReadonlyOrder || !canEditField("paidAmount")}
                 />
               </OrderFormSection>
 
-              <OrderFormSection title="Комментарий">
+              <OrderFormSection>
                 <Controller
                   control={form.control}
                   name="description"
                   render={({ field }) => (
                     <textarea
-                      className="min-h-[92px] w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-ring focus:ring-2 focus:ring-ring/20 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="min-h-[92px] w-full resize-none rounded-md border border-input bg-white px-3 py-2 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-ring focus:ring-2 focus:ring-ring/20 disabled:cursor-not-allowed disabled:opacity-50"
                       value={field.value ?? ""}
                       onChange={(e) => field.onChange(e.target.value)}
-                      disabled={isSubmitting || isReadonlyOrder}
+                      disabled={isSubmitting || isReadonlyOrder || !canEditField("description")}
                     />
                   )}
                 />
               </OrderFormSection>
 
-              <OrderFormSection title="История">
-                <OrderHistoryPanel history={orderHistoryQuery.data ?? []} loading={orderHistoryQuery.isPending} />
-              </OrderFormSection>
             </form>
           </div>
         ) : (

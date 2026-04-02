@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { DELIVERY_STATUS_OPTIONS, ORDER_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from "@/shared/config/order-static";
 
 export type OrderItemFormValues = {
   productId: number;
@@ -12,20 +13,17 @@ export const orderItemFormSchema = z.object({
 
 export const orderFormSchema = z
   .object({
-    clientId: z.number().int().positive("Выберите клиента"),
+    clientPhone: z.string().trim().min(3, "Введите телефон клиента").max(50, "Слишком длинный номер"),
     countryId: z.number().int().positive("Выберите страну"),
-    cityId: z.number().int().positive("Выберите город"),
+    city: z.string().trim().min(1, "Введите город").max(120, "Слишком длинный город"),
     address: z.string().trim().min(1, "Адрес обязателен").max(500, "Адрес слишком длинный"),
 
-    deliveryCompanyId: z.number().int().nonnegative(),
-    deliveryTypeId: z.number().int().nonnegative(),
+    deliveryStatus: z.enum(DELIVERY_STATUS_OPTIONS.map((item) => item.value) as [string, ...string[]]),
     deliveryPrice: z.number().min(0, "Цена не может быть отрицательной"),
     storagePlaceId: z.number().int().nonnegative(),
 
-    paymentStatusId: z.number().int().positive("Выберите статус оплаты"),
-    orderStatusId: z.number().int().positive("Выберите статус заказа"),
-    assemblyStatusId: z.number().int().nonnegative(),
-    responsibleUserId: z.number().int().nonnegative(),
+    paymentStatus: z.enum(PAYMENT_STATUS_OPTIONS.map((item) => item.value) as [string, ...string[]]),
+    orderStatus: z.enum(ORDER_STATUS_OPTIONS.map((item) => item.value) as [string, ...string[]]),
 
     paidAmount: z.number().min(0, "Оплата не может быть отрицательной"),
     description: z.string().trim().max(2000, "Слишком длинное описание").optional(),

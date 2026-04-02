@@ -1,35 +1,42 @@
-import type { Order, OrderItem, OrderUpdateDto } from "@/entities/order/api/order-types";
+import type { Order, OrderCreateDto, OrderItem, OrderUpdateDto } from "@/entities/order/api/order-types";
 import type { OrderFormValues } from "@/features/orders/model/order-form-schema";
+import { DELIVERY_STATUS_OPTIONS, ORDER_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from "@/shared/config/order-static";
+
+function toNumber(value: unknown, fallback = 0): number {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return fallback;
+}
 
 export function orderApiToFormValues(order: Order): OrderFormValues {
   const items = order.items?.length
     ? order.items.map((it) => ({
-        productId: it.productId,
-        quantity: it.quantity,
+        productId: toNumber(it.productId, 0),
+        quantity: toNumber(it.quantity, 1),
       }))
     : [{ productId: 0, quantity: 1 }];
 
   return {
-    clientId: order.clientId ?? 0,
-    countryId: order.countryId ?? 0,
-    cityId: order.cityId ?? 0,
+    clientPhone: order.clientPhone ?? "",
+    countryId: toNumber(order.countryId, 0),
+    city: order.city ?? "",
     address: order.address ?? "",
 
-    deliveryCompanyId: order.deliveryCompanyId ?? 0,
-    deliveryTypeId: order.deliveryTypeId ?? 0,
-    deliveryPrice: order.deliveryPrice ?? 0,
-    storagePlaceId: order.storagePlaceId ?? 0,
+    deliveryStatus: (order.deliveryStatus ?? DELIVERY_STATUS_OPTIONS[0].value) as OrderFormValues["deliveryStatus"],
+    deliveryPrice: toNumber(order.deliveryPrice, 0),
+    storagePlaceId: toNumber(order.storagePlaceId, 0),
 
-    paymentStatusId: order.paymentStatusId ?? 0,
-    orderStatusId: order.orderStatusId ?? 0,
-    assemblyStatusId: order.assemblyStatusId ?? 0,
-    responsibleUserId: order.responsibleUserId ?? 0,
+    paymentStatus: (order.paymentStatus ?? PAYMENT_STATUS_OPTIONS[0].value) as OrderFormValues["paymentStatus"],
+    orderStatus: (order.orderStatus ?? ORDER_STATUS_OPTIONS[0].value) as OrderFormValues["orderStatus"],
 
-    paidAmount: order.paidAmount ?? 0,
+    paidAmount: toNumber(order.paidAmount, 0),
     description: order.description ?? undefined,
 
-    totalPrice: order.totalPrice ?? 0,
-    remainingAmount: order.remainingAmount ?? 0,
+    totalPrice: toNumber(order.totalPrice, 0),
+    remainingAmount: toNumber(order.remainingAmount, 0),
 
     items,
   };
@@ -42,24 +49,39 @@ export function orderFormValuesToUpdateDto(values: OrderFormValues): OrderUpdate
   }));
 
   return {
-    clientId: values.clientId,
+    clientPhone: values.clientPhone,
     countryId: values.countryId,
-    cityId: values.cityId,
+    city: values.city,
     address: values.address,
 
-    deliveryCompanyId: values.deliveryCompanyId === 0 ? null : values.deliveryCompanyId,
-    deliveryTypeId: values.deliveryTypeId === 0 ? null : values.deliveryTypeId,
+    deliveryStatus: values.deliveryStatus as OrderUpdateDto["deliveryStatus"],
     deliveryPrice: values.deliveryPrice ?? 0,
     storagePlaceId: values.storagePlaceId === 0 ? null : values.storagePlaceId,
 
-    paymentStatusId: values.paymentStatusId,
-    orderStatusId: values.orderStatusId,
-    assemblyStatusId: values.assemblyStatusId === 0 ? null : values.assemblyStatusId,
-    responsibleUserId: values.responsibleUserId === 0 ? null : values.responsibleUserId,
+    paymentStatus: values.paymentStatus as OrderUpdateDto["paymentStatus"],
+    orderStatus: values.orderStatus as OrderUpdateDto["orderStatus"],
 
     description: values.description ?? undefined,
     paidAmount: values.paidAmount,
     items,
+  };
+}
+
+export function orderFormValuesToCreateDto(values: OrderFormValues): OrderCreateDto {
+  const base = orderFormValuesToUpdateDto(values);
+  return {
+    clientPhone: values.clientPhone,
+    countryId: values.countryId,
+    city: values.city,
+    address: values.address,
+    deliveryStatus: values.deliveryStatus as OrderCreateDto["deliveryStatus"],
+    deliveryPrice: values.deliveryPrice ?? 0,
+    paymentStatus: values.paymentStatus as OrderCreateDto["paymentStatus"],
+    orderStatus: values.orderStatus as OrderCreateDto["orderStatus"],
+    storagePlaceId: base.storagePlaceId === null ? undefined : base.storagePlaceId,
+    description: values.description ?? undefined,
+    paidAmount: values.paidAmount,
+    items: base.items ?? [],
   };
 }
 

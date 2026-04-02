@@ -15,6 +15,8 @@ import { ProductDrawer } from "@/features/products/ui/product-drawer";
 import { useProductsQuery, useDeleteProductMutation } from "@/features/products/api/product-crud-hooks";
 import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
 import { toast } from "sonner";
+import { PRODUCT_AVAILABILITY_OPTIONS } from "@/shared/config/product-availability";
+import type { ProductAvailabilityStatus } from "@/shared/config/product-availability";
 
 type ActiveFilterValue = "all" | "active" | "inactive";
 
@@ -31,7 +33,7 @@ export function ProductsCrudSection() {
 
   const [manufacturerId, setManufacturerId] = useState<number | "">("");
   const [activeSubstanceId, setActiveSubstanceId] = useState<number | "">("");
-  const [productStatusId, setProductStatusId] = useState<number | "">("");
+  const [availabilityStatus, setAvailabilityStatus] = useState<ProductAvailabilityStatus | "">("");
   const [productOrderSourceId, setProductOrderSourceId] = useState<number | "">("");
   const [isActiveFilter, setIsActiveFilter] = useState<ActiveFilterValue>("all");
 
@@ -42,25 +44,28 @@ export function ProductsCrudSection() {
     "active-substances",
     { params: { isActive: true, search: undefined } },
   );
-  const { options: productStatusOptions, isPending: isProductStatusesPending } = useDictionaryOptionsQuery("product-statuses", {
-    params: { search: undefined },
-  });
   const { options: productOrderSourceOptions, isPending: isProductOrderSourcesPending } = useDictionaryOptionsQuery(
     "product-order-sources",
     { params: { isActive: true, search: undefined } },
   );
 
   const isDictionariesPending =
-    isManufacturersPending || isActiveSubstancesPending || isProductStatusesPending || isProductOrderSourcesPending;
+    isManufacturersPending || isActiveSubstancesPending || isProductOrderSourcesPending;
 
   const manufacturerById = useMemo(() => mapOptionsToMap(manufacturerOptions), [manufacturerOptions]);
   const activeSubstanceById = useMemo(() => mapOptionsToMap(activeSubstanceOptions), [activeSubstanceOptions]);
-  const productStatusById = useMemo(() => mapOptionsToMap(productStatusOptions), [productStatusOptions]);
+  const availabilityStatusByCode = useMemo(() => {
+    const map = new Map<string, { label: string; color?: string }>();
+    for (const opt of PRODUCT_AVAILABILITY_OPTIONS) {
+      map.set(opt.value, { label: opt.label, color: opt.color });
+    }
+    return map;
+  }, []);
   const listQuery = useProductsQuery({
     search: debouncedSearch || undefined,
     manufacturerId: manufacturerId === "" ? undefined : manufacturerId,
     activeSubstanceId: activeSubstanceId === "" ? undefined : activeSubstanceId,
-    productStatusId: productStatusId === "" ? undefined : productStatusId,
+    availabilityStatus: availabilityStatus === "" ? undefined : availabilityStatus,
     productOrderSourceId: productOrderSourceId === "" ? undefined : productOrderSourceId,
     isActive: isActiveFilter === "all" ? undefined : isActiveFilter === "active",
   });
@@ -110,11 +115,14 @@ export function ProductsCrudSection() {
         sortAccessor: (row) => activeSubstanceById.get(row.activeSubstanceId) ?? "",
       },
       {
-        id: "productStatusId",
+        id: "availabilityStatus",
         header: "Статус",
-        cell: (row) => <StatusBadge label={getLabelById(productStatusById, row.productStatusId)} tone="neutral" />,
+        cell: (row) => {
+          const status = row.availabilityStatus ? availabilityStatusByCode.get(row.availabilityStatus) : undefined;
+          return <StatusBadge label={status?.label ?? "—"} customColor={status?.color} tone="neutral" />;
+        },
         sortable: true,
-        sortAccessor: (row) => getLabelById(productStatusById, row.productStatusId),
+        sortAccessor: (row) => (row.availabilityStatus ? availabilityStatusByCode.get(row.availabilityStatus)?.label ?? "—" : "—"),
       },
       {
         id: "stockQuantity",
@@ -200,13 +208,13 @@ export function ProductsCrudSection() {
         ),
       },
     ];
-  }, [activeSubstanceById, manufacturerById, productStatusById, openEdit, handleDelete, isDeletingProduct]);
+  }, [activeSubstanceById, manufacturerById, availabilityStatusByCode, openEdit, handleDelete, isDeletingProduct]);
 
   const onResetFilters = () => {
     setSearch("");
     setManufacturerId("");
     setActiveSubstanceId("");
-    setProductStatusId("");
+    setAvailabilityStatus("");
     setProductOrderSourceId("");
     setIsActiveFilter("all");
   };
@@ -248,9 +256,9 @@ export function ProductsCrudSection() {
 
             <div className="w-full sm:w-[180px]">
               <NativeSelect
-                value={productStatusId}
-                options={productStatusOptions}
-                onValueChange={(next) => setProductStatusId(next)}
+                value={availabilityStatus}
+                options={PRODUCT_AVAILABILITY_OPTIONS}
+                onValueChange={(next) => setAvailabilityStatus(next === "" ? "" : next)}
                 placeholder="Статус"
                 disabled={isDictionariesPending}
               />
@@ -325,11 +333,3 @@ function mapOptionsToMap(options: Array<{ value: number; label: string }>) {
   return map;
 }
 
-function getLabelById(map: Map<number, string>, id: number | string | null | undefined) {
-  if (typeof id === "number") return map.get(id) ?? "—";
-  if (typeof id === "string") {
-    const parsed = Number(id);
-    if (Number.isFinite(parsed)) return map.get(parsed) ?? "—";
-  }
-  return "—";
-}

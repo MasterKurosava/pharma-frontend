@@ -15,7 +15,7 @@ function toListParams(params: ProductListParams | undefined) {
     search: params.search,
     manufacturerId: params.manufacturerId,
     activeSubstanceId: params.activeSubstanceId,
-    productStatusId: params.productStatusId,
+    availabilityStatus: params.availabilityStatus,
     productOrderSourceId: params.productOrderSourceId,
     isActive: params.isActive,
   };

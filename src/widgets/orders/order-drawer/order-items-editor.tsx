@@ -15,9 +15,7 @@ type OrderItemsEditorProps = {
   control: Control<OrderFormValues>;
   errors: FieldErrors<OrderFormValues>;
   fields: Array<{ id: string }>;
-  items: OrderFormValues["items"];
   productOptions: ItemOption[];
-  productAvailableById: Map<number, number>;
   append: UseFieldArrayAppend<OrderFormValues, "items">;
   remove: UseFieldArrayRemove;
   disabled?: boolean;
@@ -27,9 +25,7 @@ export function OrderItemsEditor({
   control,
   errors,
   fields,
-  items,
   productOptions,
-  productAvailableById,
   append,
   remove,
   disabled = false,
@@ -39,11 +35,6 @@ export function OrderItemsEditor({
       {fields.map((fieldItem, index) => {
         const productError = errors.items?.[index]?.productId;
         const quantityError = errors.items?.[index]?.quantity;
-        const currentItem = items?.[index];
-        const selectedProductId = typeof currentItem?.productId === "number" ? currentItem.productId : undefined;
-        const available = typeof selectedProductId === "number" ? productAvailableById.get(selectedProductId) : undefined;
-        const quantity = typeof currentItem?.quantity === "number" ? currentItem.quantity : undefined;
-        const showAvailabilityHint = typeof available === "number" && typeof quantity === "number";
 
         return (
           <div
@@ -65,11 +56,6 @@ export function OrderItemsEditor({
                 )}
               />
               {productError ? <p className="text-xs text-destructive">{String(productError.message)}</p> : null}
-              {showAvailabilityHint ? (
-                <p className={`text-xs ${quantity > available ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"}`}>
-                  Доступно: {available}
-                </p>
-              ) : null}
             </div>
 
             <div className="space-y-1.5">
@@ -85,6 +71,7 @@ export function OrderItemsEditor({
                       const n = Number(e.target.value);
                       field.onChange(Number.isFinite(n) ? n : 0);
                     }}
+                    className="bg-white"
                     disabled={disabled}
                   />
                 )}
@@ -96,8 +83,8 @@ export function OrderItemsEditor({
               <Button
                 type="button"
                 size="icon"
-                variant="ghost"
-                className="mt-0.5"
+                variant="destructive"
+                className="mt-0.5 h-8 w-8 cursor-pointer"
                 onClick={() => remove(index)}
                 disabled={disabled || fields.length <= 1}
                 aria-label="Удалить позицию"

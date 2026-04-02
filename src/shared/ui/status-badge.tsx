@@ -21,8 +21,44 @@ const statusBadgeVariants = cva(
 
 export type StatusBadgeProps = {
   label: string;
+  customColor?: string;
 } & VariantProps<typeof statusBadgeVariants>;
 
-export function StatusBadge({ label, tone }: StatusBadgeProps) {
-  return <span className={statusBadgeVariants({ tone })}>{label}</span>;
+function normalizeHexColor(value: string) {
+  const color = value.trim();
+  if (!color.startsWith("#")) return null;
+  const hex = color.slice(1);
+  if (!/^[0-9a-fA-F]+$/.test(hex)) return null;
+  if (hex.length === 3) {
+    const expanded = hex
+      .split("")
+      .map((ch) => ch + ch)
+      .join("");
+    return `#${expanded.toUpperCase()}`;
+  }
+  if (hex.length === 6) {
+    return `#${hex.toUpperCase()}`;
+  }
+  return null;
+}
+
+function addHexAlpha(hexColor: string, alpha: string) {
+  return `${hexColor}${alpha}`;
+}
+
+export function StatusBadge({ label, tone, customColor }: StatusBadgeProps) {
+  const normalizedColor = typeof customColor === "string" ? normalizeHexColor(customColor) : null;
+  const style = normalizedColor
+    ? {
+        borderColor: addHexAlpha(normalizedColor, "66"),
+        backgroundColor: addHexAlpha(normalizedColor, "1A"),
+        color: normalizedColor,
+      }
+    : undefined;
+
+  return (
+    <span className={statusBadgeVariants({ tone: normalizedColor ? "neutral" : tone })} style={style}>
+      {label}
+    </span>
+  );
 }

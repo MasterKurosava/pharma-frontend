@@ -6,6 +6,7 @@ import { getSimpleDictionaryConfig } from "@/features/dictionaries/model/simple-
 export type DictionaryFormValues = {
   label: string;
   code?: string;
+  color?: string;
   isActive?: boolean;
 };
 
@@ -16,6 +17,7 @@ export function getDictionaryFormSchema(resource: DictionaryResourceName) {
     .object({
       label: z.string().trim().min(1, "Name is required").max(120, "Max 120 characters"),
       code: z.string().trim().max(32, "Max 32 characters").optional(),
+      color: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/, "Use HEX color like #22C55E").optional(),
       isActive: z.boolean().optional(),
     })
     .superRefine((values, ctx) => {
@@ -28,6 +30,15 @@ export function getDictionaryFormSchema(resource: DictionaryResourceName) {
           });
         }
       }
+
+      if (config.supportsColor && !values.color) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["color"],
+          message: "Color is required",
+        });
+      }
+
     });
 }
 

@@ -14,6 +14,8 @@ import type { DictionaryItem, DictionaryResourceName } from "@/entities/dictiona
 import { cn } from "@/shared/lib/utils";
 import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
 import { toast } from "sonner";
+import { useAuth } from "@/features/auth/model/use-auth";
+import { canEditResource } from "@/shared/lib/access-control";
 
 type DictionaryCrudSectionProps = {
   resource: DictionaryResourceName;
@@ -21,6 +23,8 @@ type DictionaryCrudSectionProps = {
 
 export function DictionaryCrudSection({ resource }: DictionaryCrudSectionProps) {
   const config = getSimpleDictionaryConfig(resource);
+  const { user } = useAuth();
+  const canEdit = canEditResource(user?.role, resource);
 
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search, 300);
@@ -47,10 +51,26 @@ export function DictionaryCrudSection({ resource }: DictionaryCrudSectionProps) 
   const columns = useMemo<Array<DataTableColumn<DictionaryItem>>>(
     () => {
       const base: Array<DataTableColumn<DictionaryItem>> = [
+        ...(config.supportsCode
+          ? [
+              {
+                id: "code",
+                header: "Код",
+                cell: (row: DictionaryItem) => <span>{row.code ?? "—"}</span>,
+                sortable: true,
+                sortAccessor: (row: DictionaryItem) => row.code ?? "",
+              } satisfies DataTableColumn<DictionaryItem>,
+            ]
+          : []),
         {
           id: "name",
           header: config.singularLabel,
-          cell: (row) => <span>{row.name || row.label}</span>,
+          cell: (row) =>
+            config.supportsColor ? (
+              <StatusBadge label={row.name || row.label} customColor={row.color} />
+            ) : (
+              <span>{row.name || row.label}</span>
+            ),
           sortable: true,
           sortAccessor: (row) => row.name || row.label,
         },
@@ -59,12 +79,12 @@ export function DictionaryCrudSection({ resource }: DictionaryCrudSectionProps) 
       if (config.supportsActive) {
         base.push({
           id: "isActive",
-          header: "Status",
+          header: "Статус",
           cell: (row) => {
             const active = Boolean(row.isActive);
             return (
               <StatusBadge
-                label={active ? "Active" : "Inactive"}
+                label={active ? "Активный" : "Неактивный"}
                 tone={active ? "success" : "neutral"}
               />
             );
@@ -91,6 +111,7 @@ export function DictionaryCrudSection({ resource }: DictionaryCrudSectionProps) 
                 setModalOpen(true);
               }}
               aria-label="Редактировать элемент"
+              disabled={!canEdit}
             >
               <Pencil className={cn("h-4 w-4")} />
             </Button>
@@ -102,7 +123,7 @@ export function DictionaryCrudSection({ resource }: DictionaryCrudSectionProps) 
                   size="icon"
                   aria-label="Удалить элемент"
                   onClick={(e) => e.stopPropagation()}
-                  disabled={isDeletingDictionary}
+                  disabled={isDeletingDictionary || !canEdit}
                 >
                   <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
@@ -121,7 +142,14 @@ export function DictionaryCrudSection({ resource }: DictionaryCrudSectionProps) 
 
       return base;
     },
-    [config.singularLabel, config.supportsActive, handleDelete, isDeletingDictionary],
+    [
+      canEdit,
+      config.singularLabel,
+      config.supportsActive,
+      config.supportsCode,
+      handleDelete,
+      isDeletingDictionary,
+    ],
   );
 
   const onCreate = () => {
@@ -142,7 +170,7 @@ export function DictionaryCrudSection({ resource }: DictionaryCrudSectionProps) 
         }
         actions={
           <div className="flex items-center gap-2">
-            <Button size="sm" onClick={onCreate}>
+            <Button size="sm" onClick={onCreate} disabled={!canEdit}>
               Создать
             </Button>
           </div>
@@ -166,6 +194,7 @@ export function DictionaryCrudSection({ resource }: DictionaryCrudSectionProps) 
         resource={resource}
         mode={modalMode}
         initialItem={selectedItem}
+        readOnly={!canEdit}
       />
     </>
   );

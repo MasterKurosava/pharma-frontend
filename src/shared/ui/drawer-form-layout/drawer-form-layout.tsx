@@ -129,7 +129,7 @@ export function DrawerFormLayout({
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/50">
             <div className="flex items-center gap-2 rounded-xl border bg-card px-4 py-3 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
-              Saving...
+              Сохранение…
             </div>
           </div>
         ) : null}

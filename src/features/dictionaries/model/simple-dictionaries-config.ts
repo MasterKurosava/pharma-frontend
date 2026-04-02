@@ -5,6 +5,7 @@ export type SimpleDictionaryConfig = {
   tabLabel: string;
   singularLabel: string;
   supportsCode: boolean;
+  supportsColor: boolean;
   supportsActive: boolean;
 };
 
@@ -14,6 +15,7 @@ export const simpleDictionariesConfig = [
     tabLabel: "Производители",
     singularLabel: "Производитель",
     supportsCode: false,
+    supportsColor: false,
     supportsActive: true,
   },
   {
@@ -21,13 +23,7 @@ export const simpleDictionariesConfig = [
     tabLabel: "Активные вещества",
     singularLabel: "Активное вещество",
     supportsCode: false,
-    supportsActive: true,
-  },
-  {
-    resource: "product-statuses",
-    tabLabel: "Статусы препаратов",
-    singularLabel: "Статус препарата",
-    supportsCode: false,
+    supportsColor: false,
     supportsActive: true,
   },
   {
@@ -35,41 +31,7 @@ export const simpleDictionariesConfig = [
     tabLabel: "Источники заказа препаратов",
     singularLabel: "Источник заказа препарата",
     supportsCode: false,
-    supportsActive: true,
-  },
-  {
-    resource: "delivery-companies",
-    tabLabel: "Службы доставки",
-    singularLabel: "Служба доставки",
-    supportsCode: false,
-    supportsActive: true,
-  },
-  {
-    resource: "delivery-types",
-    tabLabel: "Типы доставки",
-    singularLabel: "Тип доставки",
-    supportsCode: false,
-    supportsActive: true,
-  },
-  {
-    resource: "payment-statuses",
-      tabLabel: "Статусы оплаты",
-    singularLabel: "Статус оплаты",
-    supportsCode: false,
-    supportsActive: true,
-  },
-  {
-    resource: "assembly-statuses",
-    tabLabel: "Статусы сборки",
-    singularLabel: "Статус сборки",
-    supportsCode: false,
-    supportsActive: true,
-  },
-  {
-    resource: "order-statuses",
-    tabLabel: "Статусы заказов",
-    singularLabel: "Статус заказа",
-    supportsCode: false,
+    supportsColor: true,
     supportsActive: true,
   },
   {
@@ -77,20 +39,7 @@ export const simpleDictionariesConfig = [
     tabLabel: "Места хранения",
     singularLabel: "Место хранения",
     supportsCode: false,
-    supportsActive: true,
-  },
-  {
-    resource: "client-statuses",
-    tabLabel: "Статусы клиентов",
-    singularLabel: "Статус клиента",
-    supportsCode: false,
-    supportsActive: true,
-  },
-  {
-    resource: "countries",
-    tabLabel: "Страны",
-    singularLabel: "Страна",
-    supportsCode: true,
+    supportsColor: false,
     supportsActive: true,
   },
 ] satisfies ReadonlyArray<SimpleDictionaryConfig>;

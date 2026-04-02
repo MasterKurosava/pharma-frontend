@@ -47,6 +47,7 @@ export function OrderFinanceBlock({
                   const n = Number(e.target.value);
                   field.onChange(Number.isFinite(n) ? n : 0);
                 }}
+                className="bg-white"
                 disabled={disabled}
               />
             )}

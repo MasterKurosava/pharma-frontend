@@ -17,6 +17,7 @@ type DictionaryApiItem = {
   name?: string;
   label?: string;
   code?: string;
+  color?: string;
   isActive?: boolean;
 };
 
@@ -27,6 +28,7 @@ function normalizeDictionaryItem(item: DictionaryApiItem): DictionaryItem {
     name: displayName,
     label: item.label ?? item.name ?? "",
     code: item.code,
+    color: item.color,
     isActive: item.isActive,
   };
 }

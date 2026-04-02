@@ -1,88 +1,107 @@
-import { useEffect, useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useCallback, useEffect, useMemo } from "react";
+import { useLocation, useSearchParams } from "react-router-dom";
+import { Plus } from "lucide-react";
 
 import { ordersUrlDefaults, parseOrdersSearchParams, serializeOrdersSearchParams, type OrdersFiltersState, type OrdersListUrlState } from "@/features/orders/model/orders-url";
+import { useAuth } from "@/features/auth/model/use-auth";
 import { useOrdersListQuery } from "@/features/orders/api/orders-queries";
 import { useOrderFilterOptions } from "@/features/orders/model/use-order-filter-options";
 import type { OrdersListParams } from "@/entities/order/api/order-types";
+import {
+  applyFixedOrderFilters,
+  ORDER_DEFAULT_VISIBLE_FILTERS,
+  ORDER_EMPTY_FILTERS_STATE,
+  ORDER_FILTER_PATCH_RESET_PAGE_KEYS,
+} from "@/features/orders/config/orders-access-config";
 
 import { OrdersFiltersBar } from "@/widgets/orders/orders-filters/orders-filters-bar";
 import { OrdersPagination } from "@/widgets/orders/orders-pagination/orders-pagination";
 import { OrdersTable } from "@/widgets/orders/orders-table/orders-table";
 import { OrderDrawerEditor } from "@/widgets/orders/order-drawer/order-drawer-editor";
+import type { OrderStatusCode } from "@/shared/config/order-static";
+import { Button } from "@/shared/ui/button";
 
-export function OrdersListWidget() {
+type OrdersListWidgetProps = {
+  forcedOrderStatuses?: OrderStatusCode[];
+};
+
+export function OrdersListWidget({ forcedOrderStatuses }: OrdersListWidgetProps) {
+  const { user } = useAuth();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const urlState = useMemo<OrdersListUrlState>(() => parseOrdersSearchParams(searchParams), [searchParams]);
+  const orderPolicy = user?.accessPolicy?.orders;
+  const visibleFilters = orderPolicy?.visibleFilters ?? ORDER_DEFAULT_VISIBLE_FILTERS;
+  const fixedFilters = orderPolicy?.fixedFilters ?? {};
+  const effectiveState = useMemo(() => applyFixedOrderFilters(urlState, fixedFilters), [fixedFilters, urlState]);
 
   const ordersListParams = useMemo<OrdersListParams>(
     () => ({
-      search: urlState.search,
-      clientId: urlState.clientId,
-      countryId: urlState.countryId,
-      cityId: urlState.cityId,
-      responsibleUserId: urlState.responsibleUserId,
-      paymentStatusId: urlState.paymentStatusId,
-      orderStatusId: urlState.orderStatusId,
-      assemblyStatusId: urlState.assemblyStatusId,
-      storagePlaceId: urlState.storagePlaceId,
-      deliveryCompanyId: urlState.deliveryCompanyId,
-      dateFrom: urlState.dateFrom,
-      dateTo: urlState.dateTo,
-      page: urlState.page,
-      pageSize: urlState.pageSize,
-      sortBy: urlState.sortBy,
-      sortOrder: urlState.sortOrder,
+      search: effectiveState.search,
+      countryId: effectiveState.countryId,
+      city: effectiveState.city,
+      paymentStatus: effectiveState.paymentStatus,
+      orderStatus: effectiveState.orderStatus,
+      orderStatuses: forcedOrderStatuses,
+      deliveryStatus: effectiveState.deliveryStatus,
+      page: effectiveState.page,
+      pageSize: effectiveState.pageSize,
+      sortBy: effectiveState.sortBy,
+      sortOrder: effectiveState.sortOrder,
     }),
-    [urlState],
+    [effectiveState, forcedOrderStatuses],
   );
+  const effectiveVisibleFilters = useMemo(() => {
+    const isSpecialPage = location.pathname === "/orders-delivery" || location.pathname === "/orders-assembly";
+    if (!isSpecialPage) {
+      return forcedOrderStatuses?.length ? visibleFilters.filter((key) => key !== "orderStatus") : visibleFilters;
+    }
+    return ["search", "countryId", "city", "paymentStatus", "deliveryStatus"] as typeof visibleFilters;
+  }, [forcedOrderStatuses, location.pathname, visibleFilters]);
+
 
   const listQuery = useOrdersListQuery(ordersListParams);
 
   const drawerOrderId = urlState.drawerOrderId;
+  const isDrawerOpen = typeof drawerOrderId !== "undefined";
 
-  const options = useOrderFilterOptions(urlState.countryId);
+  const options = useOrderFilterOptions(effectiveState.countryId);
 
   const maps = useMemo(() => {
     const toMap = (opts: Array<{ value: number; label: string }>) => new Map(opts.map((o) => [o.value, o.label]));
+    const toStatusMap = (opts: Array<{ value: string; label: string; color?: string }>) =>
+      new Map(opts.map((o) => [o.value, { label: o.label, color: o.color }]));
     return {
       countries: toMap(options.countries.options),
-      cities: toMap(options.allCityOptions),
-      clients: toMap(options.clientOptions),
-      paymentStatuses: toMap(options.paymentStatuses.options),
-      orderStatuses: toMap(options.orderStatuses.options),
-      assemblyStatuses: toMap(options.assemblyStatuses.options),
+      paymentStatuses: toStatusMap(options.paymentStatuses),
+      orderStatuses: toStatusMap(options.orderStatuses),
+      deliveryStatuses: toStatusMap(options.deliveryStatuses),
       storagePlaces: toMap(options.storagePlaces.options),
-      deliveryCompanies: toMap(options.deliveryCompanies.options),
     };
   }, [options]);
 
-  const setUrl = (patch: Partial<OrdersListUrlState>) => {
+  const setUrl = useCallback((patch: Partial<OrdersListUrlState>) => {
     const next: OrdersListUrlState = {
       ...urlState,
       ...patch,
     };
 
     setSearchParams(serializeOrdersSearchParams(next), { replace: true });
-  };
+  }, [setSearchParams, urlState]);
 
-  const applyFilterPatch = (patch: Partial<OrdersFiltersState> & { sortBy?: OrdersListUrlState["sortBy"]; sortOrder?: OrdersListUrlState["sortOrder"]; pageSize?: number }) => {
+  const applyFilterPatch = useCallback((patch: Partial<OrdersFiltersState> & { sortBy?: OrdersListUrlState["sortBy"]; sortOrder?: OrdersListUrlState["sortOrder"]; pageSize?: number }) => {
+    const changedKeys = Object.keys(patch).filter((key) => {
+      const patchValue = patch[key as keyof typeof patch];
+      const currentValue = urlState[key as keyof OrdersListUrlState];
+      return patchValue !== currentValue;
+    });
+    if (changedKeys.length === 0) return;
+
     const hasPageSize = typeof patch.pageSize !== "undefined";
     const shouldResetPage =
       hasPageSize ||
-      "search" in patch ||
-      "clientId" in patch ||
-      "countryId" in patch ||
-      "cityId" in patch ||
-      "responsibleUserId" in patch ||
-      "paymentStatusId" in patch ||
-      "orderStatusId" in patch ||
-      "assemblyStatusId" in patch ||
-      "storagePlaceId" in patch ||
-      "deliveryCompanyId" in patch ||
-      "dateFrom" in patch ||
-      "dateTo" in patch ||
+      ORDER_FILTER_PATCH_RESET_PAGE_KEYS.some((key) => key in patch && patch[key] !== urlState[key]) ||
       "sortBy" in patch ||
       "sortOrder" in patch;
 
@@ -91,24 +110,13 @@ export function OrdersListWidget() {
       page: shouldResetPage ? ordersUrlDefaults.page : urlState.page,
       pageSize: hasPageSize ? patch.pageSize ?? urlState.pageSize : urlState.pageSize,
     });
-  };
+  }, [setUrl, urlState]);
 
-  const onReset = () => {
+  const onReset = useCallback(() => {
     setSearchParams(
       serializeOrdersSearchParams({
         drawerOrderId: undefined,
-        search: undefined,
-        clientId: undefined,
-        countryId: undefined,
-        cityId: undefined,
-        responsibleUserId: undefined,
-        paymentStatusId: undefined,
-        orderStatusId: undefined,
-        assemblyStatusId: undefined,
-        storagePlaceId: undefined,
-        deliveryCompanyId: undefined,
-        dateFrom: undefined,
-        dateTo: undefined,
+        ...ORDER_EMPTY_FILTERS_STATE,
         page: ordersUrlDefaults.page,
         pageSize: ordersUrlDefaults.pageSize,
         sortBy: ordersUrlDefaults.sortBy,
@@ -116,7 +124,7 @@ export function OrdersListWidget() {
       }),
       { replace: true },
     );
-  };
+  }, [setSearchParams]);
 
   const orders = listQuery.data?.items ?? [];
 
@@ -135,35 +143,36 @@ export function OrdersListWidget() {
 
   return (
     <div className="space-y-4">
+      <div className="flex justify-end">
+        <Button onClick={() => setUrl({ drawerOrderId: 0 })}>
+          <Plus className="mr-2 h-4 w-4" />
+          Создать заказ
+        </Button>
+      </div>
       <OrdersFiltersBar
         state={{
           search: urlState.search,
-          clientId: urlState.clientId,
-          countryId: urlState.countryId,
-          cityId: urlState.cityId,
-          paymentStatusId: urlState.paymentStatusId,
-          orderStatusId: urlState.orderStatusId,
-          assemblyStatusId: urlState.assemblyStatusId,
-          deliveryCompanyId: urlState.deliveryCompanyId,
-          dateFrom: urlState.dateFrom,
-          dateTo: urlState.dateTo,
+          countryId: effectiveState.countryId,
+          city: effectiveState.city,
+          paymentStatus: effectiveState.paymentStatus,
+          orderStatus: effectiveState.orderStatus,
+          deliveryStatus: effectiveState.deliveryStatus,
         }}
-        onChange={(patch) => applyFilterPatch(patch)}
+        onChange={applyFilterPatch}
         onReset={onReset}
+        visibleFilters={effectiveVisibleFilters}
+        fixedFilters={fixedFilters}
         countryOptions={options.countries.options}
-        cityOptions={options.cityOptions}
-        clientOptions={options.clientOptions}
-        paymentStatusOptions={options.paymentStatuses.options}
-        orderStatusOptions={options.orderStatuses.options}
-        assemblyStatusOptions={options.assemblyStatuses.options}
-        deliveryCompanyOptions={options.deliveryCompanies.options}
+        paymentStatusOptions={options.paymentStatuses}
+        orderStatusOptions={options.orderStatuses}
+        deliveryStatusOptions={options.deliveryStatuses}
       />
 
       <OrdersTable
         orders={orders}
         loading={listQuery.isPending || listQuery.isFetching}
-        emptyTitle="No orders found"
-        emptyDescription="Try adjusting filters or search."
+        emptyTitle="Заказы не найдены"
+        emptyDescription="Попробуйте изменить фильтры или строку поиска."
         sortBy={urlState.sortBy}
         sortOrder={urlState.sortOrder}
         onSortChange={(sortBy, sortOrder) => {
@@ -187,11 +196,12 @@ export function OrdersListWidget() {
       />
 
       <OrderDrawerEditor
-        open={Boolean(drawerOrderId)}
+        open={isDrawerOpen}
         onOpenChange={(open) => {
           if (!open) setUrl({ drawerOrderId: undefined });
         }}
         orderId={drawerOrderId}
+        onCreated={(createdOrderId) => setUrl({ drawerOrderId: createdOrderId })}
       />
     </div>
   );

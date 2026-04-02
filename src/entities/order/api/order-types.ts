@@ -1,55 +1,41 @@
+import type { DeliveryStatusCode, OrderStatusCode, PaymentStatusCode } from "@/shared/config/order-static";
 export type Maybe<T> = T | null;
 
 export type OrderItem = {
   productId: number;
   quantity: number;
+  productNameSnapshot?: string;
 };
 
 export type OrderListParams = {
   search?: string;
-  clientId?: number;
+  clientPhone?: string;
   countryId?: number;
-  cityId?: number;
-  responsibleUserId?: number;
-  paymentStatusId?: number;
-  orderStatusId?: number;
-  assemblyStatusId?: number;
+  city?: string;
+  paymentStatus?: PaymentStatusCode;
+  orderStatus?: OrderStatusCode;
+  orderStatuses?: OrderStatusCode[];
   storagePlaceId?: number;
-  deliveryCompanyId?: number;
+  deliveryStatus?: DeliveryStatusCode;
   dateFrom?: string;
   dateTo?: string;
 };
 
 export type OrderStatsSummary = Record<string, number>;
 
-export type OrderHistoryItem = {
-  id: number;
-  createdAt: string;
-  event: string;
-  actorUserId?: number;
-  meta?: Record<string, unknown>;
-};
-
 export type Order = {
   id: number;
-  clientId?: number;
-  client?: {
-    name?: string;
-    phone?: string;
-  };
+  clientPhone?: string;
   countryId?: number;
-  cityId?: number;
+  city?: string;
   address?: string;
 
-  deliveryCompanyId?: Maybe<number>;
-  deliveryTypeId?: Maybe<number>;
+  deliveryStatus?: DeliveryStatusCode;
   deliveryPrice?: Maybe<number>;
 
-  paymentStatusId?: number;
-  orderStatusId?: number;
-  assemblyStatusId?: Maybe<number>;
+  paymentStatus?: PaymentStatusCode;
+  orderStatus?: OrderStatusCode;
   storagePlaceId?: Maybe<number>;
-  responsibleUserId?: Maybe<number>;
   description?: string;
   paidAmount?: Maybe<number>;
   totalPrice?: Maybe<number>;
@@ -63,20 +49,17 @@ export type Order = {
 };
 
 export type OrderCreateDto = {
-  clientId: number;
+  clientPhone: string;
   countryId: number;
-  cityId: number;
+  city: string;
   address: string;
 
-  deliveryCompanyId?: Maybe<number>;
-  deliveryTypeId?: Maybe<number>;
+  deliveryStatus: DeliveryStatusCode;
   deliveryPrice?: Maybe<number>;
 
-  paymentStatusId: number;
-  orderStatusId: number;
-  assemblyStatusId?: Maybe<number>;
+  paymentStatus: PaymentStatusCode;
+  orderStatus: OrderStatusCode;
   storagePlaceId?: Maybe<number>;
-  responsibleUserId?: Maybe<number>;
 
   description?: string;
   paidAmount?: Maybe<number>;
