@@ -27,6 +27,13 @@ type DeleteOrderOptimisticContext = {
   orderId: number | string;
 };
 
+type OrdersListFilter = {
+  orderStatus?: string;
+  orderStatuses?: string[];
+  deliveryStatus?: string;
+  paymentStatus?: string;
+};
+
 function applyPatchToOrder(order: Order, patch: OptimisticOrderPatchDto): Order {
   const next: Order = { ...order, ...patch };
   if (typeof patch.paidAmount === "number") {
@@ -34,6 +41,90 @@ function applyPatchToOrder(order: Order, patch: OptimisticOrderPatchDto): Order 
     next.remainingAmount = Math.max(0, totalPrice - patch.paidAmount);
   }
   return next;
+}
+
+function parseOrdersListFilter(queryKey: readonly unknown[]): OrdersListFilter {
+  const serialized = queryKey.at(2);
+  if (typeof serialized !== "string" || !serialized) return {};
+
+  try {
+    const raw = JSON.parse(serialized) as Record<string, unknown>;
+    const orderStatuses =
+      typeof raw.orderStatuses === "string"
+        ? raw.orderStatuses
+            .split(",")
+            .map((value) => value.trim())
+            .filter(Boolean)
+        : undefined;
+
+    return {
+      orderStatus: typeof raw.orderStatus === "string" ? raw.orderStatus : undefined,
+      orderStatuses: orderStatuses?.length ? orderStatuses : undefined,
+      deliveryStatus: typeof raw.deliveryStatus === "string" ? raw.deliveryStatus : undefined,
+      paymentStatus: typeof raw.paymentStatus === "string" ? raw.paymentStatus : undefined,
+    };
+  } catch {
+    return {};
+  }
+}
+
+function matchesOrderFilter(order: Order, filter: OrdersListFilter): boolean {
+  if (filter.orderStatus && order.orderStatus !== filter.orderStatus) return false;
+  if (filter.orderStatuses?.length && !filter.orderStatuses.includes(String(order.orderStatus))) return false;
+  if (filter.deliveryStatus && order.deliveryStatus !== filter.deliveryStatus) return false;
+  if (filter.paymentStatus && order.paymentStatus !== filter.paymentStatus) return false;
+  return true;
+}
+
+function mergeOrderIntoList(
+  list: OrdersListResponse,
+  order: Order,
+  filter: OrdersListFilter,
+): OrdersListResponse {
+  const orderId = String(order.id);
+  const existingIndex = list.items.findIndex((item) => String(item.id) === orderId);
+  const shouldBeVisible = matchesOrderFilter(order, filter);
+
+  if (existingIndex >= 0 && !shouldBeVisible) {
+    const nextItems = list.items.filter((item) => String(item.id) !== orderId);
+    return {
+      ...list,
+      items: nextItems,
+      total: Math.max(0, list.total - 1),
+    };
+  }
+
+  if (existingIndex >= 0) {
+    const nextItems = list.items.map((item) => (String(item.id) === orderId ? { ...item, ...order } : item));
+    return { ...list, items: nextItems };
+  }
+
+  if (!shouldBeVisible) {
+    return list;
+  }
+
+  const nextItems = [order, ...list.items].slice(0, list.pageSize);
+  return {
+    ...list,
+    items: nextItems,
+    total: list.total + 1,
+  };
+}
+
+function updateOrderInAllCachedLists(
+  queryClient: ReturnType<typeof useQueryClient>,
+  order: Order,
+) {
+  const listSnapshots = queryClient.getQueriesData<OrdersListResponse>({
+    queryKey: ordersQueryKeys.lists(),
+    exact: false,
+  });
+
+  for (const [key, data] of listSnapshots) {
+    if (!data) continue;
+    const filter = parseOrdersListFilter(key);
+    queryClient.setQueryData<OrdersListResponse>(key, mergeOrderIntoList(data, order, filter));
+  }
 }
 
 function applyOptimisticPatch(
@@ -51,18 +142,42 @@ function applyOptimisticPatch(
     return [key, queryClient.getQueryData<Order>(key)] as const;
   });
 
-  queryClient.setQueriesData<OrdersListResponse>(
-    { queryKey: ordersQueryKeys.lists(), exact: false },
-    (old) => {
-      if (!old) return old;
-      return {
-        ...old,
-        items: old.items.map((item) =>
-          targetIds.has(String(item.id)) ? applyPatchToOrder(item, patch) : item,
-        ),
-      };
-    },
-  );
+  const detailById = new Map<string, Order>();
+  for (const [, detail] of detailSnapshots) {
+    if (detail) {
+      detailById.set(String(detail.id), detail);
+    }
+  }
+
+  for (const [key, list] of listSnapshots) {
+    if (!list) continue;
+    const filter = parseOrdersListFilter(key);
+    let next = list;
+    let changed = false;
+
+    for (const item of list.items) {
+      if (!targetIds.has(String(item.id))) continue;
+      const patched = applyPatchToOrder(item, patch);
+      const merged = mergeOrderIntoList(next, patched, filter);
+      if (merged !== next) changed = true;
+      next = merged;
+      detailById.set(String(item.id), patched);
+    }
+
+    for (const [id, detail] of detailById) {
+      if (!targetIds.has(id)) continue;
+      const alreadyInList = next.items.some((item) => String(item.id) === id);
+      if (alreadyInList) continue;
+      const patched = applyPatchToOrder(detail, patch);
+      const merged = mergeOrderIntoList(next, patched, filter);
+      if (merged !== next) changed = true;
+      next = merged;
+    }
+
+    if (changed) {
+      queryClient.setQueryData<OrdersListResponse>(key, next);
+    }
+  }
 
   for (const [key, oldDetail] of detailSnapshots) {
     if (!oldDetail) continue;
@@ -126,20 +241,7 @@ export function useUpdateOrderMutation() {
 
       queryClient.setQueryData(ordersQueryKeys.detail(orderId), updatedOrder);
       queryClient.setQueryData(ordersQueryKeys.detail(updatedOrder.id), updatedOrder);
-
-      queryClient.setQueriesData<OrdersListResponse>(
-        { queryKey: ordersQueryKeys.lists(), exact: false },
-        (old) => {
-          if (!old) return old;
-          return {
-            ...old,
-            items: old.items.map((item) =>
-              String(item.id) === String(updatedOrder.id) ? { ...item, ...updatedOrder } : item,
-            ),
-          };
-        },
-      );
-
+      updateOrderInAllCachedLists(queryClient, updatedOrder);
     },
     onError: (error, _variables, context) => {
       rollbackOptimisticPatch(queryClient, context);
@@ -182,22 +284,7 @@ export function useCreateOrderMutation() {
         queryClient.removeQueries({ queryKey: ordersQueryKeys.detail(context.temporaryOrderId), exact: true });
       }
       queryClient.setQueryData(ordersQueryKeys.detail(createdOrder.id), createdOrder);
-      queryClient.setQueriesData<OrdersListResponse>(
-        { queryKey: ordersQueryKeys.lists(), exact: false },
-        (old) => {
-          if (!old) return old;
-          if (!context) {
-            return { ...old, items: [createdOrder, ...old.items] };
-          }
-          const replaced = old.items.some((item) => item.id === context.temporaryOrderId);
-          return {
-            ...old,
-            items: replaced
-              ? old.items.map((item) => (item.id === context.temporaryOrderId ? createdOrder : item))
-              : [createdOrder, ...old.items],
-          };
-        },
-      );
+      updateOrderInAllCachedLists(queryClient, createdOrder);
     },
     onError: (error, _variables, context) => {
       for (const [key, data] of context?.listSnapshots ?? []) {
