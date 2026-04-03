@@ -138,9 +138,6 @@ export function useCreateUserMutation() {
       queryClient.setQueryData(usersQueryKeys.users(), context?.usersSnapshot);
       toast.error(getApiErrorMessage(error, "Не удалось создать пользователя"));
     },
-    onSettled: async () => {
-      await queryClient.invalidateQueries({ queryKey: usersQueryKeys.users(), exact: false });
-    },
   });
 }
 
@@ -158,33 +155,31 @@ export function useUpdateUserMutation() {
       const nextRole = dto.role_id ? roles.find((role) => role.id === dto.role_id) : undefined;
 
       queryClient.setQueryData<UserItem[]>(usersQueryKeys.users(), (old) =>
-        old?.map((user) =>
-          user.id !== id
-            ? user
-            : {
+        old
+          ? old.map((user) => {
+              if (user.id !== id) return user;
+              return {
                 ...user,
                 login: dto.login ?? user.login,
                 firstName: dto.first_name ?? user.firstName,
                 lastName: dto.last_name ?? user.lastName,
                 roleId: dto.role_id ?? user.roleId,
                 role: nextRole ?? user.role,
-              },
-        ) ?? old,
+              };
+            })
+          : old,
       );
 
       return { usersSnapshot };
     },
     onSuccess: (updatedUser) => {
       queryClient.setQueryData<UserItem[]>(usersQueryKeys.users(), (old) =>
-        old?.map((user) => (user.id === updatedUser.id ? updatedUser : user)) ?? old,
+        old ? old.map((user) => (user.id === updatedUser.id ? updatedUser : user)) : old,
       );
     },
     onError: (error, _variables, context) => {
       queryClient.setQueryData(usersQueryKeys.users(), context?.usersSnapshot);
       toast.error(getApiErrorMessage(error, "Не удалось обновить пользователя"));
-    },
-    onSettled: async () => {
-      await queryClient.invalidateQueries({ queryKey: usersQueryKeys.users(), exact: false });
     },
   });
 }
@@ -199,16 +194,16 @@ export function useDeleteUserMutation() {
       await queryClient.cancelQueries({ queryKey: usersQueryKeys.users(), exact: false });
       const usersSnapshot = queryClient.getQueryData<UserItem[]>(usersQueryKeys.users());
 
-      queryClient.setQueryData<UserItem[]>(usersQueryKeys.users(), (old) => old?.filter((user) => user.id !== id) ?? old);
+      queryClient.setQueryData<UserItem[]>(
+        usersQueryKeys.users(),
+        (old) => (old ? old.filter((user) => user.id !== id) : old),
+      );
 
       return { usersSnapshot };
     },
     onError: (error, _id, context) => {
       queryClient.setQueryData(usersQueryKeys.users(), context?.usersSnapshot);
       toast.error(getApiErrorMessage(error, "Не удалось удалить пользователя"));
-    },
-    onSettled: async () => {
-      await queryClient.invalidateQueries({ queryKey: usersQueryKeys.users(), exact: false });
     },
   });
 }

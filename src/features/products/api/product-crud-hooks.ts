@@ -87,9 +87,10 @@ export function useProductsQuery(params?: ProductListParams) {
 }
 
 export function useProductDetailQuery(productId: number | string | undefined) {
+  const resolvedProductId = productId ?? 0;
   return useQuery({
-    queryKey: typeof productId === "undefined" ? productsQueryKeys.detail(0) : productsQueryKeys.detail(productId),
-    queryFn: () => getProductById(productId ?? ""),
+    queryKey: productsQueryKeys.detail(resolvedProductId),
+    queryFn: () => getProductById(resolvedProductId),
     enabled: Boolean(productId),
     retry: false,
   });
@@ -142,9 +143,6 @@ export function useCreateProductMutation() {
       restoreProductListSnapshots(queryClient, context?.listSnapshots ?? []);
       toast.error(getApiErrorMessage(error, "Failed to create product"));
     },
-    onSettled: async () => {
-      await queryClient.invalidateQueries({ queryKey: productsQueryKeys.lists(), exact: false });
-    },
   });
 }
 
@@ -162,7 +160,10 @@ export function useUpdateProductMutation() {
 
       queryClient.setQueriesData<Product[]>(
         { queryKey: productsQueryKeys.lists(), exact: false },
-        (old) => old?.map((item) => (isSameId(item.id, id) ? applyProductPatch(item, dto) : item)) ?? old,
+        (old) => {
+          if (!old) return old;
+          return old.map((item) => (isSameId(item.id, id) ? applyProductPatch(item, dto) : item));
+        },
       );
 
       if (detailSnapshot) {
@@ -176,7 +177,10 @@ export function useUpdateProductMutation() {
       queryClient.setQueryData(productsQueryKeys.detail(updatedProduct.id), updatedProduct);
       queryClient.setQueriesData<Product[]>(
         { queryKey: productsQueryKeys.lists(), exact: false },
-        (old) => old?.map((item) => (isSameId(item.id, updatedProduct.id) ? { ...item, ...updatedProduct } : item)) ?? old,
+        (old) => {
+          if (!old) return old;
+          return old.map((item) => (isSameId(item.id, updatedProduct.id) ? { ...item, ...updatedProduct } : item));
+        },
       );
     },
     onError: (error, _variables, context) => {
@@ -185,12 +189,6 @@ export function useUpdateProductMutation() {
         queryClient.setQueryData(productsQueryKeys.detail(context.id), context.detailSnapshot);
       }
       toast.error(getApiErrorMessage(error, "Failed to update product"));
-    },
-    onSettled: async (_data, _error, variables) => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: productsQueryKeys.lists(), exact: false }),
-        queryClient.invalidateQueries({ queryKey: productsQueryKeys.detail(variables.id), exact: true }),
-      ]);
     },
   });
 }
@@ -210,7 +208,10 @@ export function useDeleteProductMutation() {
 
       queryClient.setQueriesData<Product[]>(
         { queryKey: productsQueryKeys.lists(), exact: false },
-        (old) => old?.filter((item) => !isSameId(item.id, id)) ?? old,
+        (old) => {
+          if (!old) return old;
+          return old.filter((item) => !isSameId(item.id, id));
+        },
       );
       queryClient.removeQueries({ queryKey: productsQueryKeys.detail(id), exact: true });
 
@@ -222,12 +223,6 @@ export function useDeleteProductMutation() {
         queryClient.setQueryData(productsQueryKeys.detail(context.id), context.detailSnapshot);
       }
       toast.error(getApiErrorMessage(error, "Failed to delete product"));
-    },
-    onSettled: async (_data, _error, id) => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: productsQueryKeys.lists(), exact: false }),
-        queryClient.invalidateQueries({ queryKey: productsQueryKeys.detail(id), exact: true }),
-      ]);
     },
   });
 }

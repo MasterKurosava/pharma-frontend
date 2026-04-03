@@ -12,6 +12,7 @@ export type Product = {
   stockQuantity: number;
   reservedQuantity: number;
   availableQuantity: number;
+  price?: number | string | null;
   imageUrl?: string | null;
   description?: string | null;
   createdAt?: string;

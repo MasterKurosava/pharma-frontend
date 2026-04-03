@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 
 import { useDictionaryListQuery } from "@/features/dictionaries/api/dictionary-crud-hooks";
-import type { DictionaryListParams, DictionaryResourceName, DictionaryItem } from "@/entities/dictionary/api/dictionary-types";
+import type { DictionaryListParams, DictionaryResourceName } from "@/entities/dictionary/api/dictionary-types";
 
 export type DictionarySelectOption = {
   value: number;
@@ -12,7 +12,6 @@ export type DictionarySelectOption = {
 
 type UseDictionaryOptionsQueryParams = {
   params?: DictionaryListParams;
-  includeInactive?: boolean;
   includeCodeInLabel?: boolean;
 };
 
@@ -23,14 +22,14 @@ export function useDictionaryOptionsQuery(
   const query = useDictionaryListQuery(resource, params);
 
   const options = useMemo<DictionarySelectOption[]>(() => {
-    const items = (query.data ?? []) as DictionaryItem[];
+    const items = query.data ?? [];
 
-    return items.map((item: DictionaryItem) => {
-      const baseLabel = item.name || item.label;
+    return items.map((item) => {
+      const baseLabel = item.name;
       const label = includeCodeInLabel && item.code ? `${baseLabel} (${item.code})` : baseLabel;
       return { value: item.id, label, code: item.code, color: item.color };
     });
-  }, [includeCodeInLabel, params, query.data]);
+  }, [includeCodeInLabel, query.data]);
 
   return { ...query, options };
 }

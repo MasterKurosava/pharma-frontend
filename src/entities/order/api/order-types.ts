@@ -2,6 +2,7 @@ import type { DeliveryStatusCode, OrderStatusCode, PaymentStatusCode } from "@/s
 export type Maybe<T> = T | null;
 
 export type OrderItem = {
+  id?: number;
   productId: number;
   quantity: number;
   productNameSnapshot?: string;

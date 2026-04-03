@@ -98,9 +98,10 @@ export function useDictionaryListQuery(resource: DictionaryResourceName, params?
 }
 
 export function useDictionaryDetailQuery(resource: DictionaryResourceName, id: number | string | undefined) {
+  const resolvedId = id ?? 0;
   return useQuery({
-    queryKey: dictionariesQueryKeys.detail(resource, id ?? ""),
-    queryFn: () => getDictionaryById(resource, id ?? ""),
+    queryKey: dictionariesQueryKeys.detail(resource, resolvedId),
+    queryFn: () => getDictionaryById(resource, resolvedId),
     enabled: Boolean(id),
     retry: false,
   });
@@ -147,12 +148,6 @@ export function useCreateDictionaryMutation(resource: DictionaryResourceName) {
       const message = getApiErrorMessage(error, `Failed to create ${resource}`);
       toast.error(message);
     },
-    onSettled: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: dictionariesQueryKeys.listsByResource(resource),
-        exact: false,
-      });
-    },
   });
 }
 
@@ -177,7 +172,10 @@ export function useUpdateDictionaryMutation(resource: DictionaryResourceName) {
 
       queryClient.setQueriesData<DictionaryItem[]>(
         { queryKey: dictionariesQueryKeys.listsByResource(resource), exact: false },
-        (old) => old?.map((item) => (isSameId(item.id, id) ? applyDictionaryPatch(item, dto) : item)) ?? old,
+        (old) => {
+          if (!old) return old;
+          return old.map((item) => (isSameId(item.id, id) ? applyDictionaryPatch(item, dto) : item));
+        },
       );
 
       if (detailSnapshot) {
@@ -194,7 +192,10 @@ export function useUpdateDictionaryMutation(resource: DictionaryResourceName) {
       queryClient.setQueryData(dictionariesQueryKeys.detail(resource, updatedItem.id), updatedItem);
       queryClient.setQueriesData<DictionaryItem[]>(
         { queryKey: dictionariesQueryKeys.listsByResource(resource), exact: false },
-        (old) => old?.map((item) => (isSameId(item.id, updatedItem.id) ? { ...item, ...updatedItem } : item)) ?? old,
+        (old) => {
+          if (!old) return old;
+          return old.map((item) => (isSameId(item.id, updatedItem.id) ? { ...item, ...updatedItem } : item));
+        },
       );
     },
     onError: (error, _variables, context) => {
@@ -204,18 +205,6 @@ export function useUpdateDictionaryMutation(resource: DictionaryResourceName) {
       }
       const message = getApiErrorMessage(error, `Failed to update ${resource}`);
       toast.error(message);
-    },
-    onSettled: async (_data, _error, variables) => {
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: dictionariesQueryKeys.listsByResource(resource),
-          exact: false,
-        }),
-        queryClient.invalidateQueries({
-          queryKey: dictionariesQueryKeys.detail(resource, variables.id),
-          exact: true,
-        }),
-      ]);
     },
   });
 }
@@ -241,7 +230,10 @@ export function useDeleteDictionaryMutation(resource: DictionaryResourceName) {
 
       queryClient.setQueriesData<DictionaryItem[]>(
         { queryKey: dictionariesQueryKeys.listsByResource(resource), exact: false },
-        (old) => old?.filter((item) => !isSameId(item.id, id)) ?? old,
+        (old) => {
+          if (!old) return old;
+          return old.filter((item) => !isSameId(item.id, id));
+        },
       );
       queryClient.removeQueries({ queryKey: dictionariesQueryKeys.detail(resource, id), exact: true });
 
@@ -254,18 +246,6 @@ export function useDeleteDictionaryMutation(resource: DictionaryResourceName) {
       }
       const message = getApiErrorMessage(error, `Failed to delete ${resource}`);
       toast.error(message);
-    },
-    onSettled: async (_data, _error, id) => {
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: dictionariesQueryKeys.listsByResource(resource),
-          exact: false,
-        }),
-        queryClient.invalidateQueries({
-          queryKey: dictionariesQueryKeys.detail(resource, id),
-          exact: true,
-        }),
-      ]);
     },
   });
 }

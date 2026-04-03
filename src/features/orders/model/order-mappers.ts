@@ -14,6 +14,7 @@ function toNumber(value: unknown, fallback = 0): number {
 export function orderApiToFormValues(order: Order): OrderFormValues {
   const items = order.items?.length
     ? order.items.map((it) => ({
+        itemId: toNumber(it.id, 0) || undefined,
         productId: toNumber(it.productId, 0),
         quantity: toNumber(it.quantity, 1),
       }))
@@ -44,6 +45,7 @@ export function orderApiToFormValues(order: Order): OrderFormValues {
 
 export function orderFormValuesToUpdateDto(values: OrderFormValues): OrderUpdateDto {
   const items: OrderItem[] = values.items.map((it) => ({
+    ...(it.itemId ? { id: it.itemId } : {}),
     productId: it.productId,
     quantity: it.quantity,
   }));
@@ -55,13 +57,13 @@ export function orderFormValuesToUpdateDto(values: OrderFormValues): OrderUpdate
     address: values.address,
 
     deliveryStatus: values.deliveryStatus as OrderUpdateDto["deliveryStatus"],
-    deliveryPrice: values.deliveryPrice ?? 0,
+    deliveryPrice: values.deliveryPrice,
     storagePlaceId: values.storagePlaceId === 0 ? null : values.storagePlaceId,
 
     paymentStatus: values.paymentStatus as OrderUpdateDto["paymentStatus"],
     orderStatus: values.orderStatus as OrderUpdateDto["orderStatus"],
 
-    description: values.description ?? undefined,
+    description: values.description,
     paidAmount: values.paidAmount,
     items,
   };
@@ -75,11 +77,11 @@ export function orderFormValuesToCreateDto(values: OrderFormValues): OrderCreate
     city: values.city,
     address: values.address,
     deliveryStatus: values.deliveryStatus as OrderCreateDto["deliveryStatus"],
-    deliveryPrice: values.deliveryPrice ?? 0,
+    deliveryPrice: values.deliveryPrice,
     paymentStatus: values.paymentStatus as OrderCreateDto["paymentStatus"],
     orderStatus: values.orderStatus as OrderCreateDto["orderStatus"],
     storagePlaceId: base.storagePlaceId === null ? undefined : base.storagePlaceId,
-    description: values.description ?? undefined,
+    description: values.description,
     paidAmount: values.paidAmount,
     items: base.items ?? [],
   };

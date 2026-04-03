@@ -27,6 +27,7 @@ import { OrderFormSection } from "@/widgets/orders/order-drawer/order-form-secti
 import { OrderItemsEditor } from "@/widgets/orders/order-drawer/order-items-editor";
 import { OrderFinanceBlock } from "@/widgets/orders/order-drawer/order-finance-block";
 import { toast } from "sonner";
+import type { Product } from "@/entities/product/api/product-types";
 
 type OrderDrawerEditorProps = {
   open: boolean;
@@ -62,21 +63,8 @@ function formatMoney(value?: number | null) {
   return new Intl.NumberFormat("ru-RU", { style: "currency", currency: "KZT", maximumFractionDigits: 0 }).format(value);
 }
 
-function getProductUnitPrice(product: unknown): number {
-  if (!product || typeof product !== "object") return 0;
-
-  const record = product as Record<string, unknown>;
-  const priceCandidate =
-    record.price ??
-    record.unitPrice ??
-    record.salePrice ??
-    record.sellingPrice ??
-    record.retailPrice ??
-    record.purchasePrice ??
-    0;
-
-  const numeric = Number(priceCandidate);
-  return Number.isFinite(numeric) ? numeric : 0;
+function getProductUnitPrice(product: Product): number {
+  return Number(product.price ?? 0);
 }
 
 export function OrderDrawerEditor({ open, onOpenChange, orderId, onCreated }: OrderDrawerEditorProps) {
@@ -136,14 +124,6 @@ export function OrderDrawerEditor({ open, onOpenChange, orderId, onCreated }: Or
     }));
   }, [productsQuery.data]);
 
-  const orderStatusLabelMap = useMemo(() => new Map(orderStatusOptions.map((o) => [o.value, o.label])), [orderStatusOptions]);
-
-  const isReadonlyOrder = useMemo(() => {
-    const label = orderStatusLabelMap.get(watchedOrderStatus as (typeof ORDER_STATUS_OPTIONS)[number]["value"]) ?? "";
-    const lowered = label.toLowerCase();
-    return lowered.includes("отмен") || lowered.includes("закры") || lowered.includes("cancel");
-  }, [orderStatusLabelMap, watchedOrderStatus]);
-
   const isOrderDraftStage = watchedOrderStatus === "ORDER";
   const isDeliveryPrepStage = watchedOrderStatus === "DELIVERY_REGISTRATION";
   const isAddressRequiredStage = watchedOrderStatus === "ADDRESS_REQUIRED";
@@ -195,8 +175,8 @@ export function OrderDrawerEditor({ open, onOpenChange, orderId, onCreated }: Or
 
     const items = watchedItems ?? [];
     const itemTotal = items.reduce((sum, item) => {
-      const productId = Number(item?.productId ?? 0);
-      const quantity = Number(item?.quantity ?? 0);
+      const productId = Number(item.productId);
+      const quantity = Number(item.quantity);
       if (!Number.isFinite(productId) || productId <= 0 || !Number.isFinite(quantity) || quantity <= 0) return sum;
 
       const unitPrice = productPriceMap.get(productId) ?? 0;
@@ -252,11 +232,9 @@ export function OrderDrawerEditor({ open, onOpenChange, orderId, onCreated }: Or
   const paymentStatusError = showValidation ? form.formState.errors.paymentStatus : undefined;
   const orderStatusError = showValidation ? form.formState.errors.orderStatus : undefined;
 
-  const canSave = (isCreateMode || isDirty) && isValid && !isSubmitting && open && !isReadonlyOrder && editableFields.size > 0;
+  const canSave = (isCreateMode || isDirty) && isValid && !isSubmitting && open && editableFields.size > 0;
 
   const submit = async (values: OrderFormValues) => {
-    if (isReadonlyOrder) return;
-
     if (isCreateMode) {
       const createDto = orderFormValuesToCreateDto(values);
       const createdOrder = await createOrderMutation.mutateAsync(createDto);
@@ -353,7 +331,7 @@ export function OrderDrawerEditor({ open, onOpenChange, orderId, onCreated }: Or
               onClose={onAttemptClose}
             />
 
-            <form className="pb-6">
+            <div className="pb-6">
               <OrderFormSection>
                 <div className="grid gap-4 md:grid-cols-2">
                   <Controller
@@ -367,7 +345,7 @@ export function OrderDrawerEditor({ open, onOpenChange, orderId, onCreated }: Or
                           onChange={(e) => field.onChange(e.target.value)}
                           placeholder="+7701..."
                           className={cn("bg-white", clientPhoneError ? "border-destructive ring-destructive/30" : null)}
-                          disabled={isSubmitting || isReadonlyOrder || !canEditField("clientPhone")}
+                          disabled={isSubmitting || !canEditField("clientPhone")}
                         />
                         {clientPhoneError ? <p className="text-xs text-destructive">{String(clientPhoneError.message)}</p> : null}
                       </div>
@@ -386,7 +364,7 @@ export function OrderDrawerEditor({ open, onOpenChange, orderId, onCreated }: Or
                           onValueChange={(next) => field.onChange(next)}
                           placeholder="Не выбрано"
                           className={cn(orderStatusError ? "border-destructive ring-destructive/30" : null)}
-                          disabled={isSubmitting || isReadonlyOrder || !canEditField("orderStatus")}
+                          disabled={isSubmitting || !canEditField("orderStatus")}
                         />
                         {orderStatusError ? <p className="text-xs text-destructive">{String(orderStatusError.message)}</p> : null}
                       </div>
@@ -403,7 +381,7 @@ export function OrderDrawerEditor({ open, onOpenChange, orderId, onCreated }: Or
                   productOptions={productsOptions}
                   append={append}
                   remove={remove}
-                  disabled={isSubmitting || isReadonlyOrder || !canEditField("items")}
+                  disabled={isSubmitting || !canEditField("items")}
                 />
               </OrderFormSection>
 
@@ -424,7 +402,6 @@ export function OrderDrawerEditor({ open, onOpenChange, orderId, onCreated }: Or
                             className={cn(countryError ? "border-destructive ring-destructive/30" : null)}
                             disabled={
                               isSubmitting ||
-                              isReadonlyOrder ||
                               !canEditField("countryId") ||
                               fixedFilters?.countryId !== undefined
                             }
@@ -445,7 +422,7 @@ export function OrderDrawerEditor({ open, onOpenChange, orderId, onCreated }: Or
                             onChange={(e) => field.onChange(e.target.value)}
                             placeholder="Введите город"
                             className={cn("bg-white", cityError ? "border-destructive ring-destructive/30" : null)}
-                            disabled={isSubmitting || isReadonlyOrder || !canEditField("city")}
+                            disabled={isSubmitting || !canEditField("city")}
                           />
                           {cityError ? <p className="text-xs text-destructive">{String(cityError.message)}</p> : null}
                         </div>
@@ -469,7 +446,7 @@ export function OrderDrawerEditor({ open, onOpenChange, orderId, onCreated }: Or
                             field.onChange(Number.isFinite(n) ? n : 0);
                           }}
                           className="bg-white"
-                          disabled={isSubmitting || isReadonlyOrder || !canEditField("deliveryPrice")}
+                          disabled={isSubmitting || !canEditField("deliveryPrice")}
                         />
                       </div>
                     )}
@@ -486,7 +463,7 @@ export function OrderDrawerEditor({ open, onOpenChange, orderId, onCreated }: Or
                           onChange={(e) => field.onChange(e.target.value)}
                           placeholder="Адрес доставки"
                           className={cn("bg-white", addressError ? "border-destructive focus-visible:ring-destructive/30" : null)}
-                          disabled={isSubmitting || isReadonlyOrder || !canEditField("address")}
+                          disabled={isSubmitting || !canEditField("address")}
                         />
                         {addressError ? <p className="text-xs text-destructive">{String(addressError.message)}</p> : null}
                       </div>
@@ -509,7 +486,7 @@ export function OrderDrawerEditor({ open, onOpenChange, orderId, onCreated }: Or
                             options={storagePlacesOptions.options}
                             onValueChange={(next) => field.onChange(next === "" ? 0 : next)}
                             placeholder="Не выбрано"
-                            disabled={isSubmitting || isReadonlyOrder || !canEditField("storagePlaceId")}
+                            disabled={isSubmitting || !canEditField("storagePlaceId")}
                           />
                         </div>
                       )}
@@ -532,7 +509,7 @@ export function OrderDrawerEditor({ open, onOpenChange, orderId, onCreated }: Or
                           onValueChange={(next) => field.onChange(next)}
                           placeholder="Не выбрано"
                           className={cn(paymentStatusError ? "border-destructive ring-destructive/30" : null)}
-                          disabled={isSubmitting || isReadonlyOrder || !canEditField("paymentStatus")}
+                          disabled={isSubmitting || !canEditField("paymentStatus")}
                         />
                         {paymentStatusError ? (
                           <p className="text-xs text-destructive">{String(paymentStatusError.message)}</p>
@@ -552,7 +529,7 @@ export function OrderDrawerEditor({ open, onOpenChange, orderId, onCreated }: Or
                             options={deliveryStatusOptions}
                             onValueChange={(next) => field.onChange(next)}
                             placeholder="Не выбрано"
-                            disabled={isSubmitting || isReadonlyOrder || !canEditField("deliveryStatus")}
+                            disabled={isSubmitting || !canEditField("deliveryStatus")}
                           />
                         </div>
                       )}
@@ -565,7 +542,7 @@ export function OrderDrawerEditor({ open, onOpenChange, orderId, onCreated }: Or
                   totalPrice={form.getValues().totalPrice}
                   remainingAmount={form.getValues().remainingAmount}
                   formatMoney={formatMoney}
-                  disabled={isSubmitting || isReadonlyOrder || !canEditField("paidAmount")}
+                  disabled={isSubmitting || !canEditField("paidAmount")}
                 />
               </OrderFormSection>
 
@@ -578,13 +555,13 @@ export function OrderDrawerEditor({ open, onOpenChange, orderId, onCreated }: Or
                       className="min-h-[92px] w-full resize-none rounded-md border border-input bg-white px-3 py-2 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-ring focus:ring-2 focus:ring-ring/20 disabled:cursor-not-allowed disabled:opacity-50"
                       value={field.value ?? ""}
                       onChange={(e) => field.onChange(e.target.value)}
-                      disabled={isSubmitting || isReadonlyOrder || !canEditField("description")}
+                      disabled={isSubmitting || !canEditField("description")}
                     />
                   )}
                 />
               </OrderFormSection>
 
-            </form>
+            </div>
           </div>
         ) : (
           <ErrorState title="Не удалось загрузить заказ" description="Попробуйте обновить страницу." />

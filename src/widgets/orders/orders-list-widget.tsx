@@ -7,7 +7,7 @@ import { ordersUrlDefaults, parseOrdersSearchParams, serializeOrdersSearchParams
 import { useAuth } from "@/features/auth/model/use-auth";
 import { useOrdersListQuery } from "@/features/orders/api/orders-queries";
 import { useOrderFilterOptions } from "@/features/orders/model/use-order-filter-options";
-import type { OrdersListParams } from "@/entities/order/api/order-types";
+import type { Order, OrdersListParams } from "@/entities/order/api/order-types";
 import { useOptimisticBulkUpdateOrdersStatusMutation, useOptimisticUpdateOrderStatusMutation } from "@/features/orders/api/order-save-mutations";
 import type { OrderUpdateFieldKey } from "@/entities/user/model/types";
 import type { DeliveryStatusCode, PaymentStatusCode } from "@/shared/config/order-static";
@@ -31,6 +31,7 @@ type OrdersListWidgetProps = {
 };
 
 type BulkStatusField = "orderStatus" | "deliveryStatus" | "paymentStatus";
+const EMPTY_ORDERS: Order[] = [];
 
 export function OrdersListWidget({ forcedOrderStatuses }: OrdersListWidgetProps) {
   const { user } = useAuth();
@@ -143,7 +144,7 @@ export function OrdersListWidget({ forcedOrderStatuses }: OrdersListWidgetProps)
     );
   }, [setSearchParams]);
 
-  const orders = listQuery.data?.items ?? [];
+  const orders = listQuery.data?.items ?? EMPTY_ORDERS;
   const selectedOrderIdsSet = useMemo(() => new Set(selectedOrderIds), [selectedOrderIds]);
   const selectedCount = selectedOrderIds.length;
 
@@ -285,7 +286,10 @@ export function OrdersListWidget({ forcedOrderStatuses }: OrdersListWidgetProps)
 
   useEffect(() => {
     const visibleIds = new Set(orders.map((order) => order.id));
-    setSelectedOrderIds((prev) => prev.filter((id) => visibleIds.has(id)));
+    setSelectedOrderIds((prev) => {
+      const next = prev.filter((id) => visibleIds.has(id));
+      return next.length === prev.length ? prev : next;
+    });
   }, [orders]);
 
   return (

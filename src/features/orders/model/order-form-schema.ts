@@ -2,11 +2,13 @@ import { z } from "zod";
 import { DELIVERY_STATUS_OPTIONS, ORDER_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from "@/shared/config/order-static";
 
 export type OrderItemFormValues = {
+  itemId?: number;
   productId: number;
   quantity: number;
 };
 
 export const orderItemFormSchema = z.object({
+  itemId: z.number().int().positive().optional(),
   productId: z.number().int().positive("Выберите продукт"),
   quantity: z.number().int().positive("Количество должно быть больше 0"),
 });

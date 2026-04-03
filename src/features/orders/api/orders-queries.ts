@@ -23,7 +23,7 @@ function toSerializableParams(params: OrdersListParams): SerializableQueryParams
     pageSize: params.pageSize,
     sortBy: params.sortBy,
     sortOrder: params.sortOrder,
-  } as unknown as SerializableQueryParams;
+  };
 }
 
 export function useOrdersListQuery(params: OrdersListParams) {
@@ -35,9 +35,10 @@ export function useOrdersListQuery(params: OrdersListParams) {
 }
 
 export function useOrderDetailQuery(orderId: number | string | undefined) {
+  const resolvedOrderId = orderId ?? 0;
   return useQuery<Order>({
-    queryKey: typeof orderId === "undefined" ? ordersQueryKeys.detail(0) : ordersQueryKeys.detail(orderId),
-    queryFn: () => getOrderById(orderId ?? ""),
+    queryKey: ordersQueryKeys.detail(resolvedOrderId),
+    queryFn: () => getOrderById(resolvedOrderId),
     enabled: Boolean(orderId),
     retry: false,
   });

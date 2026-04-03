@@ -131,11 +131,11 @@ export function useUpdateOrderMutation() {
         { queryKey: ordersQueryKeys.lists(), exact: false },
         (old) => {
           if (!old) return old;
-
-          const updatedId = String(updatedOrder.id ?? orderId);
           return {
             ...old,
-            items: old.items.map((item) => (String(item.id) === updatedId ? { ...item, ...updatedOrder } : item)),
+            items: old.items.map((item) =>
+              String(item.id) === String(updatedOrder.id) ? { ...item, ...updatedOrder } : item,
+            ),
           };
         },
       );
@@ -144,12 +144,6 @@ export function useUpdateOrderMutation() {
     onError: (error, _variables, context) => {
       rollbackOptimisticPatch(queryClient, context);
       toast.error(getApiErrorMessage(error, "Failed to save order"));
-    },
-    onSettled: async (_data, _error, variables) => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ordersQueryKeys.lists(), exact: false }),
-        queryClient.invalidateQueries({ queryKey: ordersQueryKeys.detail(variables.id), exact: true }),
-      ]);
     },
   });
 }
@@ -183,7 +177,7 @@ export function useCreateOrderMutation() {
 
       return { listSnapshots, temporaryOrderId };
     },
-    onSuccess: async (createdOrder, _variables, context) => {
+    onSuccess: (createdOrder, _variables, context) => {
       if (context) {
         queryClient.removeQueries({ queryKey: ordersQueryKeys.detail(context.temporaryOrderId), exact: true });
       }
@@ -213,9 +207,6 @@ export function useCreateOrderMutation() {
         queryClient.removeQueries({ queryKey: ordersQueryKeys.detail(context.temporaryOrderId), exact: true });
       }
       toast.error(getApiErrorMessage(error, "Failed to create order"));
-    },
-    onSettled: async () => {
-      await queryClient.invalidateQueries({ queryKey: ordersQueryKeys.lists(), exact: false });
     },
   });
 }
@@ -261,12 +252,6 @@ export function useDeleteOrderMutation() {
       }
       toast.error(getApiErrorMessage(error, "Failed to delete order"));
     },
-    onSettled: async (_data, _error, id) => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ordersQueryKeys.lists(), exact: false }),
-        queryClient.invalidateQueries({ queryKey: ordersQueryKeys.detail(id), exact: true }),
-      ]);
-    },
   });
 }
 
@@ -293,12 +278,6 @@ export function useOptimisticUpdateOrderStatusMutation() {
     onError: (error, _, context) => {
       rollbackOptimisticPatch(queryClient, context);
       toast.error(getApiErrorMessage(error, "Не удалось обновить заказ"));
-    },
-    onSettled: async (_, __, variables) => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ordersQueryKeys.lists(), exact: false }),
-        queryClient.invalidateQueries({ queryKey: ordersQueryKeys.detail(variables.id), exact: true }),
-      ]);
     },
   });
 }
@@ -336,14 +315,6 @@ export function useOptimisticBulkUpdateOrdersStatusMutation() {
     },
     onSuccess: (count) => {
       toast.success(`Обновлено заказов: ${count}`);
-    },
-    onSettled: async (_, __, variables) => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ordersQueryKeys.lists(), exact: false }),
-        ...variables.orderIds.map((id) =>
-          queryClient.invalidateQueries({ queryKey: ordersQueryKeys.detail(id), exact: true }),
-        ),
-      ]);
     },
   });
 }
