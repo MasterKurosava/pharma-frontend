@@ -1,4 +1,4 @@
-import { useMemo, useState, type MouseEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { DataTable, type DataTableColumn } from "@/shared/ui/data-table/data-table";
 import { StatusBadge } from "@/shared/ui/status-badge";
 import type { Order, OrderSortBy, OrderSortOrder } from "@/entities/order/api/order-types";
@@ -46,6 +46,14 @@ type OrdersTableProps = {
   };
 };
 
+type AnimatedOrderRow = {
+  order: Order;
+  phase: "enter" | "stable" | "exit";
+};
+
+const ROW_ENTER_DELAY_MS = 16;
+const ROW_EXIT_DURATION_MS = 220;
+
 export function OrdersTable({
   orders,
   loading,
@@ -67,6 +75,11 @@ export function OrdersTable({
     orderId: number;
     field: "orderStatus" | "paymentStatus" | "deliveryStatus";
   } | null>(null);
+  const [animatedRows, setAnimatedRows] = useState<AnimatedOrderRow[]>(() =>
+    orders.map((order) => ({ order, phase: "stable" })),
+  );
+  const enterTimerRef = useRef<number | null>(null);
+  const exitTimerRef = useRef<number | null>(null);
 
   const getMapLabel = (map: Map<number, string>, id: number | string | null | undefined) => {
     if (typeof id === "number") return map.get(id);
@@ -88,6 +101,86 @@ export function OrdersTable({
   const visibleOrderIds = useMemo(() => orders.map((order) => order.id), [orders]);
   const allVisibleSelected =
     visibleOrderIds.length > 0 && visibleOrderIds.every((id) => selectedOrderIds.has(id));
+
+  useEffect(() => {
+    const incomingById = new Map(orders.map((order) => [order.id, order]));
+
+    setAnimatedRows((prev) => {
+      if (prev.length === 0) {
+        return orders.map((order) => ({ order, phase: "enter" }));
+      }
+
+      const nextMap = new Map<number, AnimatedOrderRow>();
+      for (const row of prev) {
+        const nextOrder = incomingById.get(row.order.id);
+        if (nextOrder) {
+          nextMap.set(row.order.id, { order: nextOrder, phase: row.phase === "exit" ? "stable" : row.phase });
+        } else if (row.phase !== "exit") {
+          nextMap.set(row.order.id, { ...row, phase: "exit" });
+        } else {
+          nextMap.set(row.order.id, row);
+        }
+      }
+
+      for (const order of orders) {
+        if (!nextMap.has(order.id)) {
+          nextMap.set(order.id, { order, phase: "enter" });
+        }
+      }
+
+      const orderedVisible = orders
+        .map((order) => nextMap.get(order.id))
+        .filter((row): row is AnimatedOrderRow => Boolean(row));
+      const exiting = Array.from(nextMap.values()).filter((row) => row.phase === "exit");
+
+      return [...orderedVisible, ...exiting];
+    });
+  }, [orders]);
+
+  useEffect(() => {
+    if (enterTimerRef.current) {
+      window.clearTimeout(enterTimerRef.current);
+      enterTimerRef.current = null;
+    }
+    if (!animatedRows.some((row) => row.phase === "enter")) return;
+
+    enterTimerRef.current = window.setTimeout(() => {
+      setAnimatedRows((prev) =>
+        prev.map((row) => (row.phase === "enter" ? { ...row, phase: "stable" } : row)),
+      );
+    }, ROW_ENTER_DELAY_MS);
+
+    return () => {
+      if (enterTimerRef.current) {
+        window.clearTimeout(enterTimerRef.current);
+        enterTimerRef.current = null;
+      }
+    };
+  }, [animatedRows]);
+
+  useEffect(() => {
+    if (exitTimerRef.current) {
+      window.clearTimeout(exitTimerRef.current);
+      exitTimerRef.current = null;
+    }
+    if (!animatedRows.some((row) => row.phase === "exit")) return;
+
+    exitTimerRef.current = window.setTimeout(() => {
+      setAnimatedRows((prev) => prev.filter((row) => row.phase !== "exit"));
+    }, ROW_EXIT_DURATION_MS);
+
+    return () => {
+      if (exitTimerRef.current) {
+        window.clearTimeout(exitTimerRef.current);
+        exitTimerRef.current = null;
+      }
+    };
+  }, [animatedRows]);
+
+  const rowPhaseById = useMemo(
+    () => new Map(animatedRows.map((row) => [row.order.id, row.phase])),
+    [animatedRows],
+  );
 
   const renderStatusCell = (
     row: Order,
@@ -314,11 +407,21 @@ export function OrdersTable({
   return (
     <DataTable<Order>
       columns={columns}
-      data={orders}
+      data={animatedRows.map((row) => row.order)}
       loading={loading}
       emptyTitle={emptyTitle}
       emptyDescription={emptyDescription}
       rowKey={(row) => row.id}
+      rowClassName={(row) => {
+        const phase = rowPhaseById.get(row.id);
+        if (phase === "enter") {
+          return "opacity-0 -translate-y-1 transition-all duration-200 ease-out";
+        }
+        if (phase === "exit") {
+          return "pointer-events-none opacity-0 translate-x-2 transition-all duration-200 ease-out";
+        }
+        return "opacity-100 translate-x-0 translate-y-0 transition-all duration-200 ease-out";
+      }}
       onRowClick={onRowClick}
       sortState={activeSortState}
       onSortChange={(sort) => {

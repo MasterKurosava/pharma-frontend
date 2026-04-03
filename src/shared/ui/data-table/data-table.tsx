@@ -35,6 +35,7 @@ export type DataTableProps<T> = {
   loadingColumnsCount?: number;
   sortState?: { columnId: string; order: "asc" | "desc" } | null;
   onSortChange?: (sort: { columnId: string; order: "asc" | "desc" } | null) => void;
+  rowClassName?: (row: T, index: number) => string | undefined;
 };
 
 export function DataTable<T>({
@@ -49,6 +50,7 @@ export function DataTable<T>({
   loadingColumnsCount,
   sortState,
   onSortChange,
+  rowClassName,
 }: DataTableProps<T>) {
   const columnsCount = loadingColumnsCount ?? columns.length;
   const [internalSortState, setInternalSortState] = useState<{ columnId: string; order: "asc" | "desc" } | null>(null);
@@ -177,6 +179,7 @@ export function DataTable<T>({
                   className={cn(
                     "transition-colors",
                     onRowClick ? "cursor-pointer hover:bg-muted/30" : null,
+                    rowClassName?.(row, index),
                   )}
                 >
                   {columns.map((column) => {
