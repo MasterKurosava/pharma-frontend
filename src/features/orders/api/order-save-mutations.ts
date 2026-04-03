@@ -16,6 +16,17 @@ type OptimisticContext = {
   detailSnapshots: Array<readonly [readonly unknown[], Order | undefined]>;
 };
 
+type CreateOrderOptimisticContext = {
+  listSnapshots: Array<readonly [readonly unknown[], OrdersListResponse | undefined]>;
+  temporaryOrderId: number;
+};
+
+type DeleteOrderOptimisticContext = {
+  listSnapshots: Array<readonly [readonly unknown[], OrdersListResponse | undefined]>;
+  detailSnapshot?: Order;
+  orderId: number | string;
+};
+
 function applyPatchToOrder(order: Order, patch: OptimisticOrderPatchDto): Order {
   const next: Order = { ...order, ...patch };
   if (typeof patch.paidAmount === "number") {
@@ -74,13 +85,43 @@ function rollbackOptimisticPatch(
   }
 }
 
+function buildOptimisticOrder(dto: OrderCreateDto, temporaryOrderId: number): Order {
+  const paidAmount = dto.paidAmount ?? 0;
+  const totalPrice = 0;
+  return {
+    id: temporaryOrderId,
+    clientPhone: dto.clientPhone,
+    countryId: dto.countryId,
+    city: dto.city,
+    address: dto.address,
+    deliveryStatus: dto.deliveryStatus,
+    deliveryPrice: dto.deliveryPrice ?? null,
+    paymentStatus: dto.paymentStatus,
+    orderStatus: dto.orderStatus,
+    storagePlaceId: dto.storagePlaceId ?? null,
+    description: dto.description,
+    paidAmount,
+    totalPrice,
+    remainingAmount: Math.max(0, totalPrice - paidAmount),
+    items: dto.items,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    itemsCount: dto.items.length,
+  };
+}
+
 export function useUpdateOrderMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (payload: { id: number | string; dto: OrderUpdateDto }) =>
       updateOrder(payload.id, payload.dto),
-    onSuccess: async (updatedOrder, variables) => {
+    onMutate: async ({ id, dto }) => {
+      await queryClient.cancelQueries({ queryKey: ordersQueryKeys.lists(), exact: false });
+      await queryClient.cancelQueries({ queryKey: ordersQueryKeys.detail(id), exact: true });
+      return applyOptimisticPatch(queryClient, [id], dto);
+    },
+    onSuccess: (updatedOrder, variables) => {
       const orderId = variables.id;
 
       queryClient.setQueryData(ordersQueryKeys.detail(orderId), updatedOrder);
@@ -99,11 +140,16 @@ export function useUpdateOrderMutation() {
         },
       );
 
-      // Re-fetch all list variants so order can disappear/appear across filtered tabs (Delivery/Assembly).
-      await queryClient.invalidateQueries({ queryKey: ordersQueryKeys.lists(), exact: false });
     },
-    onError: (error) => {
+    onError: (error, _variables, context) => {
+      rollbackOptimisticPatch(queryClient, context);
       toast.error(getApiErrorMessage(error, "Failed to save order"));
+    },
+    onSettled: async (_data, _error, variables) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ordersQueryKeys.lists(), exact: false }),
+        queryClient.invalidateQueries({ queryKey: ordersQueryKeys.detail(variables.id), exact: true }),
+      ]);
     },
   });
 }
@@ -113,12 +159,63 @@ export function useCreateOrderMutation() {
 
   return useMutation({
     mutationFn: (dto: OrderCreateDto) => createOrder(dto),
-    onSuccess: async (createdOrder) => {
-      queryClient.setQueryData(ordersQueryKeys.detail(createdOrder.id), createdOrder);
-      await queryClient.invalidateQueries({ queryKey: ordersQueryKeys.lists(), exact: false });
+    onMutate: async (dto): Promise<CreateOrderOptimisticContext> => {
+      await queryClient.cancelQueries({ queryKey: ordersQueryKeys.lists(), exact: false });
+      const listSnapshots = queryClient.getQueriesData<OrdersListResponse>({
+        queryKey: ordersQueryKeys.lists(),
+        exact: false,
+      });
+      const temporaryOrderId = -Date.now();
+      const optimisticOrder = buildOptimisticOrder(dto, temporaryOrderId);
+
+      queryClient.setQueryData(ordersQueryKeys.detail(temporaryOrderId), optimisticOrder);
+      queryClient.setQueriesData<OrdersListResponse>(
+        { queryKey: ordersQueryKeys.lists(), exact: false },
+        (old) =>
+          old
+            ? {
+                ...old,
+                items: [optimisticOrder, ...old.items],
+                total: old.total + 1,
+              }
+            : old,
+      );
+
+      return { listSnapshots, temporaryOrderId };
     },
-    onError: (error) => {
+    onSuccess: async (createdOrder, _variables, context) => {
+      if (context) {
+        queryClient.removeQueries({ queryKey: ordersQueryKeys.detail(context.temporaryOrderId), exact: true });
+      }
+      queryClient.setQueryData(ordersQueryKeys.detail(createdOrder.id), createdOrder);
+      queryClient.setQueriesData<OrdersListResponse>(
+        { queryKey: ordersQueryKeys.lists(), exact: false },
+        (old) => {
+          if (!old) return old;
+          if (!context) {
+            return { ...old, items: [createdOrder, ...old.items] };
+          }
+          const replaced = old.items.some((item) => item.id === context.temporaryOrderId);
+          return {
+            ...old,
+            items: replaced
+              ? old.items.map((item) => (item.id === context.temporaryOrderId ? createdOrder : item))
+              : [createdOrder, ...old.items],
+          };
+        },
+      );
+    },
+    onError: (error, _variables, context) => {
+      for (const [key, data] of context?.listSnapshots ?? []) {
+        queryClient.setQueryData(key, data);
+      }
+      if (context) {
+        queryClient.removeQueries({ queryKey: ordersQueryKeys.detail(context.temporaryOrderId), exact: true });
+      }
       toast.error(getApiErrorMessage(error, "Failed to create order"));
+    },
+    onSettled: async () => {
+      await queryClient.invalidateQueries({ queryKey: ordersQueryKeys.lists(), exact: false });
     },
   });
 }
@@ -129,14 +226,46 @@ export function useDeleteOrderMutation() {
 
   return useMutation({
     mutationFn: (id: number | string) => deleteOrder(id),
-    onSuccess: async (_, id) => {
+    onMutate: async (id): Promise<DeleteOrderOptimisticContext> => {
+      await queryClient.cancelQueries({ queryKey: ordersQueryKeys.lists(), exact: false });
+      await queryClient.cancelQueries({ queryKey: ordersQueryKeys.detail(id), exact: true });
+
+      const listSnapshots = queryClient.getQueriesData<OrdersListResponse>({
+        queryKey: ordersQueryKeys.lists(),
+        exact: false,
+      });
+      const detailSnapshot = queryClient.getQueryData<Order>(ordersQueryKeys.detail(id));
+
+      queryClient.setQueriesData<OrdersListResponse>(
+        { queryKey: ordersQueryKeys.lists(), exact: false },
+        (old) => {
+          if (!old) return old;
+          const nextItems = old.items.filter((item) => String(item.id) !== String(id));
+          return {
+            ...old,
+            items: nextItems,
+            total: Math.max(0, old.total - (old.items.length - nextItems.length)),
+          };
+        },
+      );
+      queryClient.removeQueries({ queryKey: ordersQueryKeys.detail(id), exact: true });
+
+      return { listSnapshots, detailSnapshot, orderId: id };
+    },
+    onError: (error, _id, context) => {
+      for (const [key, data] of context?.listSnapshots ?? []) {
+        queryClient.setQueryData(key, data);
+      }
+      if (context?.detailSnapshot) {
+        queryClient.setQueryData(ordersQueryKeys.detail(context.orderId), context.detailSnapshot);
+      }
+      toast.error(getApiErrorMessage(error, "Failed to delete order"));
+    },
+    onSettled: async (_data, _error, id) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ordersQueryKeys.lists(), exact: false }),
         queryClient.invalidateQueries({ queryKey: ordersQueryKeys.detail(id), exact: true }),
       ]);
-    },
-    onError: (error) => {
-      toast.error(getApiErrorMessage(error, "Failed to delete order"));
     },
   });
 }
