@@ -35,8 +35,11 @@ export const sidebarNavGroups: NavGroup[] = [
     icon: ClipboardList,
     items: [
       { label: "Все заказы", to: "/orders", icon: ClipboardList },
-      { label: "Доставка", to: "/orders-delivery", icon: ClipboardCheck },
-      { label: "Сборка", to: "/orders-assembly", icon: ClipboardCheck },
+      { label: "Заявки", to: "/orders-requests", icon: ClipboardCheck },
+      { label: "Самовывоз", to: "/orders-pickup", icon: ClipboardCheck },
+      { label: "Доставка Алматы", to: "/orders-almaty-delivery", icon: ClipboardCheck },
+      { label: "Доставка РК", to: "/orders-rk-delivery", icon: ClipboardCheck },
+      { label: "Архив", to: "/orders-archive", icon: ClipboardCheck },
     ],
   },
   {
@@ -53,6 +56,8 @@ export const sidebarNavGroups: NavGroup[] = [
     icon: ClipboardCheck,
     items: [
       { label: "Места хранения", to: "/storage-places", icon: Warehouse },
+      { label: "Статусы действия", to: "/order-statuses-action", icon: ClipboardCheck },
+      { label: "Статусы состояния", to: "/order-statuses-state", icon: ClipboardCheck },
     ],
   },
   {

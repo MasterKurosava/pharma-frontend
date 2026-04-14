@@ -1,6 +1,7 @@
-import type { Order, OrderCreateDto, OrderItem, OrderUpdateDto } from "@/entities/order/api/order-types";
+import type { Order, OrderCreateDto, OrderUpdateDto } from "@/entities/order/api/order-types";
 import type { OrderFormValues } from "@/features/orders/model/order-form-schema";
-import { DELIVERY_STATUS_OPTIONS, ORDER_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from "@/shared/config/order-static";
+import { PAYMENT_STATUS_OPTIONS } from "@/shared/config/order-static";
+import { ORDER_DEFAULT_CODES } from "@/features/orders/config/orders-ui-config";
 
 function toNumber(value: unknown, fallback = 0): number {
   if (typeof value === "number" && Number.isFinite(value)) return value;
@@ -12,60 +13,46 @@ function toNumber(value: unknown, fallback = 0): number {
 }
 
 export function orderApiToFormValues(order: Order): OrderFormValues {
-  const items = order.items?.length
-    ? order.items.map((it) => ({
-        itemId: toNumber(it.id, 0) || undefined,
-        productId: toNumber(it.productId, 0),
-        quantity: toNumber(it.quantity, 1),
-      }))
-    : [{ productId: 0, quantity: 1 }];
-
   return {
     clientPhone: order.clientPhone ?? "",
-    countryId: toNumber(order.countryId, 0),
-    city: order.city ?? "",
-    address: order.address ?? "",
+    clientFullName: order.clientFullName ?? "",
+    city: order.city ?? undefined,
+    address: order.address ?? undefined,
 
-    deliveryStatus: (order.deliveryStatus ?? DELIVERY_STATUS_OPTIONS[0].value) as OrderFormValues["deliveryStatus"],
+    actionStatusCode: (order.actionStatusCode ?? ORDER_DEFAULT_CODES.actionStatusCode) as OrderFormValues["actionStatusCode"],
+    stateStatusCode: (order.stateStatusCode ?? ORDER_DEFAULT_CODES.stateStatusCode) as OrderFormValues["stateStatusCode"],
+    assemblyStatusCode: order.assemblyStatusCode ?? undefined,
+    paymentStatus: (order.paymentStatus ?? PAYMENT_STATUS_OPTIONS[0].value) as OrderFormValues["paymentStatus"],
     deliveryPrice: toNumber(order.deliveryPrice, 0),
     storagePlaceId: toNumber(order.storagePlaceId, 0),
+    orderStorage: order.orderStorage ?? undefined,
 
-    paymentStatus: (order.paymentStatus ?? PAYMENT_STATUS_OPTIONS[0].value) as OrderFormValues["paymentStatus"],
-    orderStatus: (order.orderStatus ?? ORDER_STATUS_OPTIONS[0].value) as OrderFormValues["orderStatus"],
-
-    paidAmount: toNumber(order.paidAmount, 0),
     description: order.description ?? undefined,
-
+    productId: toNumber(order.productId, 0),
+    quantity: toNumber(order.quantity, 1),
+    productPrice: toNumber(order.productPrice, 0),
     totalPrice: toNumber(order.totalPrice, 0),
     remainingAmount: toNumber(order.remainingAmount, 0),
-
-    items,
   };
 }
 
 export function orderFormValuesToUpdateDto(values: OrderFormValues): OrderUpdateDto {
-  const items: OrderItem[] = values.items.map((it) => ({
-    ...(it.itemId ? { id: it.itemId } : {}),
-    productId: it.productId,
-    quantity: it.quantity,
-  }));
-
   return {
     clientPhone: values.clientPhone,
-    countryId: values.countryId,
-    city: values.city,
-    address: values.address,
-
-    deliveryStatus: values.deliveryStatus as OrderUpdateDto["deliveryStatus"],
-    deliveryPrice: values.deliveryPrice,
-    storagePlaceId: values.storagePlaceId === 0 ? null : values.storagePlaceId,
-
+    clientFullName: values.clientFullName?.trim() || undefined,
+    city: values.city?.trim() || undefined,
+    address: values.address?.trim() || undefined,
+    actionStatusCode: values.actionStatusCode as OrderUpdateDto["actionStatusCode"],
+    stateStatusCode: values.stateStatusCode as OrderUpdateDto["stateStatusCode"],
+    assemblyStatusCode: values.assemblyStatusCode?.trim() || undefined,
     paymentStatus: values.paymentStatus as OrderUpdateDto["paymentStatus"],
-    orderStatus: values.orderStatus as OrderUpdateDto["orderStatus"],
-
-    description: values.description,
-    paidAmount: values.paidAmount,
-    items,
+    deliveryPrice: values.deliveryPrice,
+    storagePlaceId: values.storagePlaceId === 0 ? undefined : values.storagePlaceId,
+    orderStorage: values.orderStorage?.trim() || undefined,
+    description: values.description?.trim() || undefined,
+    productId: values.productId,
+    quantity: values.quantity,
+    productPrice: values.productPrice,
   };
 }
 
@@ -73,17 +60,19 @@ export function orderFormValuesToCreateDto(values: OrderFormValues): OrderCreate
   const base = orderFormValuesToUpdateDto(values);
   return {
     clientPhone: values.clientPhone,
-    countryId: values.countryId,
-    city: values.city,
-    address: values.address,
-    deliveryStatus: values.deliveryStatus as OrderCreateDto["deliveryStatus"],
-    deliveryPrice: values.deliveryPrice,
+    clientFullName: values.clientFullName?.trim() || undefined,
+    city: values.city?.trim() || undefined,
+    address: values.address?.trim() || undefined,
+    actionStatusCode: values.actionStatusCode as OrderCreateDto["actionStatusCode"],
+    stateStatusCode: values.stateStatusCode as OrderCreateDto["stateStatusCode"],
     paymentStatus: values.paymentStatus as OrderCreateDto["paymentStatus"],
-    orderStatus: values.orderStatus as OrderCreateDto["orderStatus"],
+    deliveryPrice: values.deliveryPrice,
     storagePlaceId: base.storagePlaceId === null ? undefined : base.storagePlaceId,
+    orderStorage: values.orderStorage?.trim() || undefined,
     description: values.description,
-    paidAmount: values.paidAmount,
-    items: base.items ?? [],
+    productId: values.productId,
+    quantity: values.quantity,
+    productPrice: values.productPrice,
   };
 }
 

@@ -1,27 +1,36 @@
 import { PageContainer } from "@/shared/ui/page-container";
 import { OrdersListWidget } from "@/widgets/orders/orders-list-widget";
-import type { OrderStatusCode } from "@/shared/config/order-static";
+import type { ActionStatusCode, OrderTableGroup } from "@/shared/config/order-static";
 
 type OrdersPageProps = {
-  forcedOrderStatuses?: OrderStatusCode[];
+  forcedOrderStatuses?: ActionStatusCode[];
+  forcedTableGroup?: OrderTableGroup;
 };
 
-export function OrdersPage({ forcedOrderStatuses }: OrdersPageProps) {
+export function OrdersPage({ forcedOrderStatuses, forcedTableGroup }: OrdersPageProps) {
   return (
     <PageContainer>
-      <OrdersListWidget forcedOrderStatuses={forcedOrderStatuses} />
+      <OrdersListWidget forcedOrderStatuses={forcedOrderStatuses} forcedTableGroup={forcedTableGroup} />
     </PageContainer>
   );
 }
 
-export function OrdersDeliveryPage() {
-  return (
-    <OrdersPage forcedOrderStatuses={["DELIVERY_REGISTRATION", "ADDRESS_REQUIRED"]} />
-  );
+export function OrdersRequestsPage() {
+  return <OrdersPage forcedTableGroup="REQUESTS" />;
 }
 
-export function OrdersAssemblyPage() {
-  return (
-    <OrdersPage forcedOrderStatuses={["ASSEMBLY_REQUIRED", "ASSEMBLED_WRITTEN_OFF", "PACKED"]} />
-  );
+export function OrdersPickupPage() {
+  return <OrdersPage forcedTableGroup="PICKUP" />;
+}
+
+export function OrdersAlmatyDeliveryPage() {
+  return <OrdersPage forcedTableGroup="ALMATY_DELIVERY" />;
+}
+
+export function OrdersRkDeliveryPage() {
+  return <OrdersPage forcedTableGroup="RK_DELIVERY" />;
+}
+
+export function OrdersArchivePage() {
+  return <OrdersPage forcedTableGroup="ARCHIVE" />;
 }

@@ -3,29 +3,38 @@ export type UserRole = "admin" | "manager" | "viewer" | string;
 export type OrderFilterKey =
   | "search"
   | "clientPhone"
-  | "countryId"
+  | "tableGroup"
   | "city"
   | "paymentStatus"
   | "orderStatus"
   | "orderStatuses"
   | "storagePlaceId"
-  | "deliveryStatus"
   | "dateFrom"
   | "dateTo";
 
+export type OrderTableGroupKey =
+  | "REQUESTS"
+  | "PICKUP"
+  | "ALMATY_DELIVERY"
+  | "RK_DELIVERY"
+  | "ARCHIVE";
+
 export type OrderUpdateFieldKey =
   | "clientPhone"
-  | "countryId"
+  | "clientFullName"
   | "city"
   | "address"
-  | "deliveryStatus"
   | "deliveryPrice"
   | "paymentStatus"
-  | "orderStatus"
+  | "actionStatusCode"
+  | "stateStatusCode"
+  | "assemblyStatusCode"
   | "storagePlaceId"
+  | "orderStorage"
   | "description"
-  | "paidAmount"
-  | "items";
+  | "productId"
+  | "productPrice"
+  | "quantity";
 
 export type AccessPolicy = {
   role: string;
@@ -34,11 +43,11 @@ export type AccessPolicy = {
   };
   orders: {
     fixedFilters: {
-      countryId?: number;
       city?: string;
       orderStatus?: string;
-      deliveryStatuses?: string[];
+      tableGroup?: OrderTableGroupKey;
     };
+    allowedTableGroups: OrderTableGroupKey[];
     visibleFilters: OrderFilterKey[];
     editableFields: OrderUpdateFieldKey[];
   };

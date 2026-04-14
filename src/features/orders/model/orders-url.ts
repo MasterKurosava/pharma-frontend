@@ -1,5 +1,5 @@
 import type { OrderSortBy, OrderSortOrder } from "@/entities/order/api/order-types";
-import type { DeliveryStatusCode, OrderStatusCode, PaymentStatusCode } from "@/shared/config/order-static";
+import type { ActionStatusCode, OrderTableGroup, PaymentStatusCode, StateStatusCode } from "@/shared/config/order-static";
 
 export const ordersUrlDefaults = {
   page: 1,
@@ -15,12 +15,12 @@ export type OrdersDrawerState = {
 export type OrdersFiltersState = {
   search?: string;
   clientPhone?: string;
-  countryId?: number;
+  tableGroup?: OrderTableGroup;
   city?: string;
   paymentStatus?: PaymentStatusCode;
-  orderStatus?: OrderStatusCode;
+  actionStatusCode?: ActionStatusCode;
+  stateStatusCode?: StateStatusCode;
   storagePlaceId?: number;
-  deliveryStatus?: DeliveryStatusCode;
   dateFrom?: string;
   dateTo?: string;
 };
@@ -54,7 +54,15 @@ export function parseOrdersSearchParams(searchParams: URLSearchParams): OrdersLi
   const sortByRaw = searchParams.get("sortBy") ?? ordersUrlDefaults.sortBy;
   const sortOrderRaw = searchParams.get("sortOrder") ?? ordersUrlDefaults.sortOrder;
 
-  const sortBy: OrderSortBy = (["createdAt", "updatedAt", "totalPrice", "remainingAmount"] as const).includes(
+  const sortBy: OrderSortBy = ([
+    "createdAt",
+    "updatedAt",
+    "totalPrice",
+    "remainingAmount",
+    "actionStatusCode",
+    "stateStatusCode",
+    "assemblyStatusCode",
+  ] as const).includes(
     sortByRaw as OrderSortBy,
   )
     ? (sortByRaw as OrderSortBy)
@@ -68,12 +76,12 @@ export function parseOrdersSearchParams(searchParams: URLSearchParams): OrdersLi
     drawerOrderId: parseIntOrUndefined(searchParams.get("orderId")),
     search: searchParams.get("search")?.trim() ? searchParams.get("search")!.trim() : undefined,
     clientPhone: searchParams.get("clientPhone")?.trim() ? searchParams.get("clientPhone")!.trim() : undefined,
-    countryId: parseIntOrUndefined(searchParams.get("countryId")),
+    tableGroup: (searchParams.get("tableGroup") as OrderTableGroup | null) ?? undefined,
     city: searchParams.get("city")?.trim() ? searchParams.get("city")!.trim() : undefined,
     paymentStatus: (searchParams.get("paymentStatus") as PaymentStatusCode | null) ?? undefined,
-    orderStatus: (searchParams.get("orderStatus") as OrderStatusCode | null) ?? undefined,
+    actionStatusCode: (searchParams.get("actionStatusCode") as ActionStatusCode | null) ?? undefined,
+    stateStatusCode: (searchParams.get("stateStatusCode") as StateStatusCode | null) ?? undefined,
     storagePlaceId: parseIntOrUndefined(searchParams.get("storagePlaceId")),
-    deliveryStatus: (searchParams.get("deliveryStatus") as DeliveryStatusCode | null) ?? undefined,
     dateFrom: parseDate(searchParams.get("dateFrom")),
     dateTo: parseDate(searchParams.get("dateTo")),
     page: page >= 1 ? page : ordersUrlDefaults.page,
@@ -95,12 +103,12 @@ export function serializeOrdersSearchParams(state: OrdersListUrlState): URLSearc
 
   if (state.search) sp.set("search", state.search);
   if (state.clientPhone) sp.set("clientPhone", state.clientPhone);
-  if (state.countryId) sp.set("countryId", String(state.countryId));
+  if (state.tableGroup) sp.set("tableGroup", state.tableGroup);
   if (state.city) sp.set("city", state.city);
   if (state.paymentStatus) sp.set("paymentStatus", state.paymentStatus);
-  if (state.orderStatus) sp.set("orderStatus", state.orderStatus);
+  if (state.actionStatusCode) sp.set("actionStatusCode", state.actionStatusCode);
+  if (state.stateStatusCode) sp.set("stateStatusCode", state.stateStatusCode);
   if (state.storagePlaceId) sp.set("storagePlaceId", String(state.storagePlaceId));
-  if (state.deliveryStatus) sp.set("deliveryStatus", state.deliveryStatus);
   if (state.dateFrom) sp.set("dateFrom", state.dateFrom);
   if (state.dateTo) sp.set("dateTo", state.dateTo);
 

@@ -8,12 +8,12 @@ import type {
   OrderUpdateDto,
   OrdersListResponse,
 } from "@/entities/order/api/order-types";
-import type { DeliveryStatusCode, OrderStatusCode, PaymentStatusCode } from "@/shared/config/order-static";
+import type { ActionStatusCode, PaymentStatusCode, StateStatusCode } from "@/shared/config/order-static";
 
 export async function getOrders(params: OrdersListParams): Promise<OrdersListResponse> {
   const normalizedParams = {
     ...params,
-    orderStatuses: params.orderStatuses?.length ? params.orderStatuses.join(",") : undefined,
+    actionStatusCodes: params.actionStatusCodes?.length ? params.actionStatusCodes.join(",") : undefined,
   };
   const { data } = await apiClient.get<OrdersListResponse>("/orders", { params: normalizedParams });
   return data;
@@ -45,8 +45,8 @@ export async function deleteOrder(id: number | string): Promise<void> {
 
 export async function updateOrdersBatchStatus(payload: {
   ids: number[];
-  orderStatus?: OrderStatusCode;
-  deliveryStatus?: DeliveryStatusCode;
+  actionStatusCode?: ActionStatusCode;
+  stateStatusCode?: StateStatusCode;
   paymentStatus?: PaymentStatusCode;
 }): Promise<{ updatedCount: number }> {
   const { data } = await apiClient.patch<{ updatedCount: number }>("/orders/batch/status", payload);

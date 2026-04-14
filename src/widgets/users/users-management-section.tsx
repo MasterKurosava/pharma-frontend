@@ -3,15 +3,23 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import {
+  type CreateRoleDto,
   type RoleItem,
   type UserItem,
   useChangeUserPasswordMutation,
+  useCreateRoleMutation,
+  useDeleteRoleMutation,
   useCreateUserMutation,
   useDeleteUserMutation,
   useRolesQuery,
+  useUpdateRoleMutation,
   useUpdateUserMutation,
   useUsersQuery,
 } from "@/features/users/api/users-management-hooks";
+import {
+  ROLE_ORDER_TABLE_GROUP_OPTIONS,
+  ROLE_ROUTE_OPTIONS,
+} from "@/features/users/config/role-access-config";
 import { Button } from "@/shared/ui/button";
 import { Card } from "@/shared/ui/card";
 import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
@@ -19,6 +27,7 @@ import { DataTable, type DataTableColumn } from "@/shared/ui/data-table/data-tab
 import { Input } from "@/shared/ui/input";
 import { ModalShell } from "@/shared/ui/modal-shell";
 import { NativeSelect } from "@/shared/ui/native-select/native-select";
+import type { OrderTableGroup } from "@/shared/config/order-static";
 
 type UserFormState = {
   login: string;
@@ -36,6 +45,20 @@ const emptyUserForm: UserFormState = {
   password: "",
 };
 
+type RoleFormState = {
+  name: string;
+  code: string;
+  allowedRoutes: string[];
+  allowedOrderTableGroups: OrderTableGroup[];
+};
+
+const emptyRoleForm: RoleFormState = {
+  name: "",
+  code: "",
+  allowedRoutes: ["/"],
+  allowedOrderTableGroups: ["REQUESTS"],
+};
+
 export function UsersManagementSection() {
   const usersQuery = useUsersQuery();
   const rolesQuery = useRolesQuery();
@@ -43,11 +66,19 @@ export function UsersManagementSection() {
   const updateUserMutation = useUpdateUserMutation();
   const deleteUserMutation = useDeleteUserMutation();
   const changePasswordMutation = useChangeUserPasswordMutation();
+  const createRoleMutation = useCreateRoleMutation();
+  const updateRoleMutation = useUpdateRoleMutation();
+  const deleteRoleMutation = useDeleteRoleMutation();
 
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [userMode, setUserMode] = useState<"create" | "edit">("create");
   const [activeUserId, setActiveUserId] = useState<number | null>(null);
   const [userForm, setUserForm] = useState<UserFormState>(emptyUserForm);
+
+  const [roleModalOpen, setRoleModalOpen] = useState(false);
+  const [roleMode, setRoleMode] = useState<"create" | "edit">("create");
+  const [activeRoleId, setActiveRoleId] = useState<number | null>(null);
+  const [roleForm, setRoleForm] = useState<RoleFormState>(emptyRoleForm);
 
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [passwordUserId, setPasswordUserId] = useState<number | null>(null);
@@ -82,6 +113,46 @@ export function UsersManagementSection() {
     setPasswordUserId(userId);
     setNewPassword("");
     setPasswordModalOpen(true);
+  };
+
+  const openCreateRole = () => {
+    setRoleMode("create");
+    setActiveRoleId(null);
+    setRoleForm(emptyRoleForm);
+    setRoleModalOpen(true);
+  };
+
+  const openEditRole = (role: RoleItem) => {
+    setRoleMode("edit");
+    setActiveRoleId(role.id);
+    setRoleForm({
+      name: role.name,
+      code: role.code,
+      allowedRoutes: role.allowedRoutes.length > 0 ? role.allowedRoutes : ["/"],
+      allowedOrderTableGroups:
+        role.allowedOrderTableGroups.length > 0
+          ? role.allowedOrderTableGroups
+          : ["REQUESTS"],
+    });
+    setRoleModalOpen(true);
+  };
+
+  const toggleRoleRoute = (route: string, checked: boolean) => {
+    setRoleForm((prev) => {
+      const nextRoutes = checked
+        ? Array.from(new Set([...prev.allowedRoutes, route]))
+        : prev.allowedRoutes.filter((item) => item !== route);
+      return { ...prev, allowedRoutes: nextRoutes };
+    });
+  };
+
+  const toggleRoleTableGroup = (group: OrderTableGroup, checked: boolean) => {
+    setRoleForm((prev) => {
+      const nextGroups = checked
+        ? Array.from(new Set([...prev.allowedOrderTableGroups, group]))
+        : prev.allowedOrderTableGroups.filter((item) => item !== group);
+      return { ...prev, allowedOrderTableGroups: nextGroups };
+    });
   };
 
   const submitUser = async () => {
@@ -124,6 +195,47 @@ export function UsersManagementSection() {
       toast.success("Пользователь обновлен");
     }
     setUserModalOpen(false);
+  };
+
+  const submitRole = async () => {
+    if (!roleForm.name.trim()) {
+      toast.error("Название роли обязательно");
+      return;
+    }
+    if (roleMode === "create" && !roleForm.code.trim()) {
+      toast.error("Код роли обязателен");
+      return;
+    }
+    if (roleForm.allowedRoutes.length === 0) {
+      toast.error("Выберите хотя бы одну страницу");
+      return;
+    }
+    if (roleForm.allowedOrderTableGroups.length === 0) {
+      toast.error("Выберите хотя бы одну таблицу заказов");
+      return;
+    }
+
+    if (roleMode === "create") {
+      const payload: CreateRoleDto = {
+        name: roleForm.name.trim(),
+        code: roleForm.code.trim().toLowerCase(),
+        allowedRoutes: roleForm.allowedRoutes,
+        allowedOrderTableGroups: roleForm.allowedOrderTableGroups,
+      };
+      await createRoleMutation.mutateAsync(payload);
+      toast.success("Роль создана");
+    } else if (activeRoleId !== null) {
+      await updateRoleMutation.mutateAsync({
+        id: activeRoleId,
+        dto: {
+          name: roleForm.name.trim(),
+          allowedRoutes: roleForm.allowedRoutes,
+          allowedOrderTableGroups: roleForm.allowedOrderTableGroups,
+        },
+      });
+      toast.success("Роль обновлена");
+    }
+    setRoleModalOpen(false);
   };
 
   const submitPasswordChange = async () => {
@@ -195,8 +307,59 @@ export function UsersManagementSection() {
       { id: "id", header: "ID", accessorKey: "id", width: 80 },
       { id: "name", header: "Название", accessorKey: "name" },
       { id: "code", header: "Код", accessorKey: "code" },
+      {
+        id: "routes",
+        header: "Страницы",
+        cell: (row) => row.allowedRoutes.length,
+        align: "right",
+        width: 120,
+      },
+      {
+        id: "tables",
+        header: "Таблицы заказов",
+        cell: (row) => row.allowedOrderTableGroups.length,
+        align: "right",
+        width: 160,
+      },
+      {
+        id: "actions",
+        header: "",
+        width: 140,
+        align: "right",
+        cell: (row) => (
+          <div data-row-action="true" className="flex justify-end gap-1">
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => openEditRole(row)}
+              aria-label="Редактировать роль"
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+            {!row.isSystem ? (
+              <ConfirmDialog
+                trigger={
+                  <Button size="icon" variant="ghost" aria-label="Удалить роль">
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                }
+                title="Удалить роль?"
+                description={`Роль "${row.name}" будет удалена.`}
+                confirmLabel="Удалить"
+                cancelLabel="Отмена"
+                confirmVariant="destructive"
+                isConfirming={deleteRoleMutation.isPending}
+                onConfirm={async () => {
+                  await deleteRoleMutation.mutateAsync(row.id);
+                  toast.success("Роль удалена");
+                }}
+              />
+            ) : null}
+          </div>
+        ),
+      },
     ];
-  }, []);
+  }, [deleteRoleMutation, openEditRole]);
 
   const usersLoading = usersQuery.isPending || rolesQuery.isPending;
   const rolesLoading = rolesQuery.isPending;
@@ -230,8 +393,12 @@ export function UsersManagementSection() {
         <div className="flex items-center justify-between px-4 py-3">
           <div>
             <h3 className="text-base font-semibold">Роли</h3>
-            <p className="text-sm text-muted-foreground">Статические роли системы</p>
+            <p className="text-sm text-muted-foreground">Управление доступами к страницам и таблицам заказов</p>
           </div>
+          <Button onClick={openCreateRole}>
+            <Plus className="mr-2 h-4 w-4" />
+            Создать роль
+          </Button>
         </div>
         <div className="px-4 pb-4">
           <DataTable<RoleItem>
@@ -283,6 +450,99 @@ export function UsersManagementSection() {
               Отмена
             </Button>
             <Button onClick={() => void submitUser()} disabled={createUserMutation.isPending || updateUserMutation.isPending}>
+              Сохранить
+            </Button>
+          </div>
+        </div>
+      </ModalShell>
+
+      <ModalShell
+        open={roleModalOpen}
+        onOpenChange={setRoleModalOpen}
+        title={roleMode === "create" ? "Создать роль" : "Редактировать роль"}
+      >
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Название роли</label>
+            <Input
+              value={roleForm.name}
+              onChange={(e) =>
+                setRoleForm((prev) => ({ ...prev, name: e.target.value }))
+              }
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Код роли</label>
+            <Input
+              value={roleForm.code}
+              disabled={roleMode === "edit"}
+              onChange={(e) =>
+                setRoleForm((prev) => ({
+                  ...prev,
+                  code: e.target.value.replace(/\s+/g, "_").toLowerCase(),
+                }))
+              }
+            />
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Доступные страницы</p>
+            <div className="grid gap-2 rounded-md border p-3 sm:grid-cols-2">
+              {ROLE_ROUTE_OPTIONS.map((option) => {
+                const checked = roleForm.allowedRoutes.includes(option.value);
+                return (
+                  <label
+                    key={option.value}
+                    className="inline-flex items-center gap-2 text-sm"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={(e) =>
+                        toggleRoleRoute(option.value, e.target.checked)
+                      }
+                    />
+                    {option.label}
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Доступные таблицы заказов</p>
+            <div className="grid gap-2 rounded-md border p-3 sm:grid-cols-2">
+              {ROLE_ORDER_TABLE_GROUP_OPTIONS.map((option) => {
+                const checked = roleForm.allowedOrderTableGroups.includes(
+                  option.value,
+                );
+                return (
+                  <label
+                    key={option.value}
+                    className="inline-flex items-center gap-2 text-sm"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={(e) =>
+                        toggleRoleTableGroup(option.value, e.target.checked)
+                      }
+                    />
+                    {option.label}
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setRoleModalOpen(false)}>
+              Отмена
+            </Button>
+            <Button
+              onClick={() => void submitRole()}
+              disabled={createRoleMutation.isPending || updateRoleMutation.isPending}
+            >
               Сохранить
             </Button>
           </div>

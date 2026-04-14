@@ -57,6 +57,8 @@ export function DataTable<T>({
   const activeSort = typeof onSortChange === "function" ? (sortState ?? null) : internalSortState;
 
   const sortedData = useMemo(() => {
+    // When parent controls sorting (server-side), we should NOT reorder rows locally.
+    if (typeof onSortChange === "function") return data;
     if (!activeSort) return data;
     const column = columns.find((c) => c.id === activeSort.columnId);
     if (!column) return data;

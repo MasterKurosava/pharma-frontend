@@ -1,6 +1,6 @@
 import type { OrdersListUrlState, OrdersFiltersState } from "@/features/orders/model/orders-url";
 import type { OrderFilterKey } from "@/entities/user/model/types";
-import type { DeliveryStatusCode, OrderStatusCode, PaymentStatusCode } from "@/shared/config/order-static";
+import type { ActionStatusCode, OrderTableGroup, PaymentStatusCode, StateStatusCode } from "@/shared/config/order-static";
 
 import { useEffect, useState } from "react";
 import { Search } from "lucide-react";
@@ -14,21 +14,20 @@ import { Input } from "@/shared/ui/input";
 type OrdersFiltersBarProps = {
   state: Pick<
     OrdersListUrlState,
-    "search" | "countryId" | "city" | "paymentStatus" | "orderStatus" | "deliveryStatus"
+    "search" | "tableGroup" | "city" | "paymentStatus" | "actionStatusCode" | "stateStatusCode"
   >;
   onChange: (patch: Partial<OrdersFiltersState>) => void;
   onReset: () => void;
   visibleFilters: OrderFilterKey[];
   fixedFilters?: {
-    countryId?: number;
     city?: string;
     orderStatus?: string;
-    deliveryStatuses?: string[];
+    tableGroup?: string;
   };
-  countryOptions: Array<{ value: number; label: string }>;
+  tableGroupOptions: Array<{ value: string; label: string }>;
   paymentStatusOptions: Array<{ value: string; label: string }>;
-  orderStatusOptions: Array<{ value: string; label: string }>;
-  deliveryStatusOptions: Array<{ value: string; label: string }>;
+  actionStatusOptions: Array<{ value: string; label: string }>;
+  stateStatusOptions: Array<{ value: string; label: string }>;
 };
 
 export function OrdersFiltersBar({
@@ -37,25 +36,25 @@ export function OrdersFiltersBar({
   onReset,
   visibleFilters,
   fixedFilters,
-  countryOptions,
+  tableGroupOptions,
   paymentStatusOptions,
-  orderStatusOptions,
-  deliveryStatusOptions,
+  actionStatusOptions,
+  stateStatusOptions,
 }: OrdersFiltersBarProps) {
   const [searchDraft, setSearchDraft] = useState(state.search ?? "");
-  const [countryIdDraft, setCountryIdDraft] = useState<number | "">(state.countryId ?? "");
+  const [tableGroupDraft, setTableGroupDraft] = useState(state.tableGroup ?? "");
   const [cityDraft, setCityDraft] = useState(state.city ?? "");
   const [paymentStatusDraft, setPaymentStatusDraft] = useState(state.paymentStatus ?? "");
-  const [deliveryStatusDraft, setDeliveryStatusDraft] = useState(state.deliveryStatus ?? "");
-  const [orderStatusDraft, setOrderStatusDraft] = useState(state.orderStatus ?? "");
+  const [stateStatusDraft, setStateStatusDraft] = useState(state.stateStatusCode ?? "");
+  const [actionStatusDraft, setActionStatusDraft] = useState(state.actionStatusCode ?? "");
   const debouncedDrafts = useDebouncedValue(
     {
       search: searchDraft,
-      countryId: countryIdDraft,
+      tableGroup: tableGroupDraft,
       city: cityDraft,
       paymentStatus: paymentStatusDraft,
-      deliveryStatus: deliveryStatusDraft,
-      orderStatus: orderStatusDraft,
+      stateStatusCode: stateStatusDraft,
+      actionStatusCode: actionStatusDraft,
     },
     350,
   );
@@ -63,31 +62,28 @@ export function OrdersFiltersBar({
 
   useEffect(() => {
     setSearchDraft(state.search ?? "");
-    setCountryIdDraft(state.countryId ?? "");
+    setTableGroupDraft(state.tableGroup ?? "");
     setCityDraft(state.city ?? "");
     setPaymentStatusDraft(state.paymentStatus ?? "");
-    setDeliveryStatusDraft(state.deliveryStatus ?? "");
-    setOrderStatusDraft(state.orderStatus ?? "");
+    setStateStatusDraft(state.stateStatusCode ?? "");
+    setActionStatusDraft(state.actionStatusCode ?? "");
   }, [
+    state.actionStatusCode,
     state.city,
-    state.countryId,
-    state.deliveryStatus,
-    state.orderStatus,
     state.paymentStatus,
     state.search,
+    state.stateStatusCode,
+    state.tableGroup,
   ]);
 
   useEffect(() => {
     onChange({
       search: debouncedDrafts.search.trim() || undefined,
-      countryId:
-        typeof debouncedDrafts.countryId === "number" && debouncedDrafts.countryId > 0
-          ? debouncedDrafts.countryId
-          : undefined,
+      tableGroup: (debouncedDrafts.tableGroup || undefined) as OrderTableGroup | undefined,
       city: debouncedDrafts.city.trim() || undefined,
       paymentStatus: (debouncedDrafts.paymentStatus || undefined) as PaymentStatusCode | undefined,
-      deliveryStatus: (debouncedDrafts.deliveryStatus || undefined) as DeliveryStatusCode | undefined,
-      orderStatus: (debouncedDrafts.orderStatus || undefined) as OrderStatusCode | undefined,
+      stateStatusCode: (debouncedDrafts.stateStatusCode || undefined) as StateStatusCode | undefined,
+      actionStatusCode: (debouncedDrafts.actionStatusCode || undefined) as ActionStatusCode | undefined,
     });
   }, [debouncedDrafts, onChange]);
 
@@ -107,16 +103,16 @@ export function OrdersFiltersBar({
             </div>
           ) : null}
 
-          {isVisible("countryId") ? (
+          {isVisible("tableGroup") ? (
             <div className="w-full sm:w-[170px]">
               <div className="space-y-1">
-                <p className="px-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Страна</p>
+                <p className="px-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Группа</p>
                 <NativeSelect
-                  value={countryIdDraft}
-                  options={[{ value: 0, label: "Все страны" }, ...countryOptions]}
-                  onValueChange={(next) => setCountryIdDraft(typeof next === "number" && next !== 0 ? next : "")}
+                  value={tableGroupDraft}
+                  options={[{ value: "", label: "Все таблицы" }, ...tableGroupOptions]}
+                  onValueChange={(next) => setTableGroupDraft(String(next || ""))}
                   placeholder=""
-                  disabled={fixedFilters?.countryId !== undefined}
+                  disabled={fixedFilters?.tableGroup !== undefined}
                 />
               </div>
             </div>
@@ -150,16 +146,15 @@ export function OrdersFiltersBar({
             </div>
           ) : null}
 
-          {isVisible("deliveryStatus") ? (
+          {isVisible("orderStatuses") ? (
             <div className="w-full sm:w-[190px]">
               <div className="space-y-1">
-                <p className="px-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Куда собрать</p>
+                <p className="px-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Статус состояния</p>
                 <NativeSelect
-                  value={deliveryStatusDraft}
-                  options={[{ value: "", label: "Любое направление сборки" }, ...deliveryStatusOptions]}
-                  onValueChange={(next) => setDeliveryStatusDraft(String(next || ""))}
+                  value={stateStatusDraft}
+                  options={[{ value: "", label: "Любой статус состояния" }, ...stateStatusOptions]}
+                  onValueChange={(next) => setStateStatusDraft(String(next || ""))}
                   placeholder=""
-                  disabled={Boolean(fixedFilters?.deliveryStatuses?.length)}
                 />
               </div>
             </div>
@@ -168,11 +163,11 @@ export function OrdersFiltersBar({
           {isVisible("orderStatus") ? (
             <div className="w-full sm:w-[190px]">
               <div className="space-y-1">
-                <p className="px-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Статус заказа</p>
+                <p className="px-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Статус действия</p>
                 <NativeSelect
-                  value={orderStatusDraft}
-                  options={[{ value: "", label: "Любой статус заказа" }, ...orderStatusOptions]}
-                  onValueChange={(next) => setOrderStatusDraft(String(next || ""))}
+                  value={actionStatusDraft}
+                  options={[{ value: "", label: "Любой статус действия" }, ...actionStatusOptions]}
+                  onValueChange={(next) => setActionStatusDraft(String(next || ""))}
                   placeholder=""
                   disabled={fixedFilters?.orderStatus !== undefined}
                 />

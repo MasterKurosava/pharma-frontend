@@ -1,23 +1,16 @@
-import type { DeliveryStatusCode, OrderStatusCode, PaymentStatusCode } from "@/shared/config/order-static";
+import type { ActionStatusCode, OrderTableGroup, PaymentStatusCode, StateStatusCode } from "@/shared/config/order-static";
 export type Maybe<T> = T | null;
-
-export type OrderItem = {
-  id?: number;
-  productId: number;
-  quantity: number;
-  productNameSnapshot?: string;
-};
 
 export type OrderListParams = {
   search?: string;
   clientPhone?: string;
-  countryId?: number;
   city?: string;
+  tableGroup?: OrderTableGroup;
   paymentStatus?: PaymentStatusCode;
-  orderStatus?: OrderStatusCode;
-  orderStatuses?: OrderStatusCode[];
+  actionStatusCode?: ActionStatusCode;
+  actionStatusCodes?: ActionStatusCode[];
   storagePlaceId?: number;
-  deliveryStatus?: DeliveryStatusCode;
+  stateStatusCode?: StateStatusCode;
   dateFrom?: string;
   dateTo?: string;
 };
@@ -27,50 +20,68 @@ export type OrderStatsSummary = Record<string, number>;
 export type Order = {
   id: number;
   clientPhone?: string;
-  countryId?: number;
+  clientFullName?: string;
   city?: string;
   address?: string;
 
-  deliveryStatus?: DeliveryStatusCode;
   deliveryPrice?: Maybe<number>;
+  orderStorage?: string;
 
   paymentStatus?: PaymentStatusCode;
-  orderStatus?: OrderStatusCode;
+  actionStatusCode?: ActionStatusCode;
+  stateStatusCode?: StateStatusCode;
+  assemblyStatusCode?: string | null;
   storagePlaceId?: Maybe<number>;
   description?: string;
-  paidAmount?: Maybe<number>;
+  prepaymentDate?: Maybe<string>;
+  paymentDate?: Maybe<string>;
+  assemblyDate?: Maybe<string>;
   totalPrice?: Maybe<number>;
+  itemsTotalPrice?: Maybe<number>;
   remainingAmount?: Maybe<number>;
 
-  items: OrderItem[];
+  productId: number;
+  quantity: number;
+  productPrice?: Maybe<number>;
+  productNameSnapshot?: string;
+  productStatusNameSnapshot?: string;
+  manufacturerNameSnapshot?: string;
+  orderSourceNameSnapshot?: string;
 
   createdAt?: string;
   updatedAt?: string;
-  itemsCount?: number;
 };
 
 export type OrderCreateDto = {
   clientPhone: string;
-  countryId: number;
-  city: string;
-  address: string;
-
-  deliveryStatus: DeliveryStatusCode;
+  clientFullName?: string;
+  city?: string;
+  address?: string;
   deliveryPrice?: Maybe<number>;
 
   paymentStatus: PaymentStatusCode;
-  orderStatus: OrderStatusCode;
+  actionStatusCode: ActionStatusCode;
+  stateStatusCode: StateStatusCode;
+  assemblyStatusCode?: string | null;
   storagePlaceId?: Maybe<number>;
+  orderStorage?: string;
 
   description?: string;
-  paidAmount?: Maybe<number>;
-
-  items: OrderItem[];
+  productId: number;
+  quantity: number;
+  productPrice?: Maybe<number>;
 };
 
 export type OrderUpdateDto = Partial<OrderCreateDto>;
 
-export type OrderSortBy = "createdAt" | "updatedAt" | "totalPrice" | "remainingAmount";
+export type OrderSortBy =
+  | "createdAt"
+  | "updatedAt"
+  | "totalPrice"
+  | "remainingAmount"
+  | "actionStatusCode"
+  | "stateStatusCode"
+  | "assemblyStatusCode";
 export type OrderSortOrder = "asc" | "desc";
 
 export type OrdersListResponse = {

@@ -3,12 +3,15 @@ import { toast } from "sonner";
 
 import { apiClient } from "@/shared/api/client";
 import { getApiErrorMessage } from "@/shared/lib/get-api-error-message";
+import type { OrderTableGroup } from "@/shared/config/order-static";
 
 export type RoleItem = {
   id: number;
   name: string;
   code: string;
   isSystem: boolean;
+  allowedRoutes: string[];
+  allowedOrderTableGroups: OrderTableGroup[];
 };
 
 export type UserItem = {
@@ -34,6 +37,19 @@ export type UpdateUserDto = {
   first_name?: string;
   last_name?: string;
   role_id?: number;
+};
+
+export type CreateRoleDto = {
+  name: string;
+  code: string;
+  allowedRoutes: string[];
+  allowedOrderTableGroups: OrderTableGroup[];
+};
+
+export type UpdateRoleDto = {
+  name?: string;
+  allowedRoutes?: string[];
+  allowedOrderTableGroups?: OrderTableGroup[];
 };
 
 type UsersOptimisticContext = {
@@ -63,6 +79,8 @@ function getFallbackRole(roleId: number): RoleItem {
     name: "—",
     code: "UNKNOWN",
     isSystem: false,
+    allowedRoutes: [],
+    allowedOrderTableGroups: [],
   };
 }
 
@@ -95,6 +113,53 @@ export function useRolesQuery() {
     queryKey: usersQueryKeys.roles(),
     queryFn: getRoles,
     retry: false,
+  });
+}
+
+export function useCreateRoleMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (dto: CreateRoleDto) => {
+      const { data } = await apiClient.post<RoleItem>("/roles", dto);
+      return data;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: usersQueryKeys.roles(), exact: false });
+    },
+    onError: (error) => {
+      toast.error(getApiErrorMessage(error, "Не удалось создать роль"));
+    },
+  });
+}
+
+export function useUpdateRoleMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: { id: number; dto: UpdateRoleDto }) => {
+      const { data } = await apiClient.put<RoleItem>(`/roles/${payload.id}`, payload.dto);
+      return data;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: usersQueryKeys.roles(), exact: false });
+    },
+    onError: (error) => {
+      toast.error(getApiErrorMessage(error, "Не удалось обновить роль"));
+    },
+  });
+}
+
+export function useDeleteRoleMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => {
+      await apiClient.delete(`/roles/${id}`);
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: usersQueryKeys.roles(), exact: false });
+    },
+    onError: (error) => {
+      toast.error(getApiErrorMessage(error, "Не удалось удалить роль"));
+    },
   });
 }
 
