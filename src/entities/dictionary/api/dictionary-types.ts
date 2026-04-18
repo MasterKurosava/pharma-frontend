@@ -2,7 +2,8 @@ export type DictionaryResourceName =
   | "manufacturers"
   | "active-substances"
   | "product-order-sources"
-  | "storage-places";
+  | "storage-places"
+  | "product-storage-places";
 
 export type DictionaryItem = {
   id: number;

@@ -33,7 +33,7 @@ function defaultCreateValues(): ProductFormValues {
     activeSubstanceId: 0,
     availabilityStatus: PRODUCT_AVAILABILITY_OPTIONS[2].value,
     productOrderSourceId: 0,
-    storagePlaceId: 0,
+    productStoragePlaceId: 0,
     stockQuantity: 0,
     reservedQuantity: 0,
     imageUrl: "",
@@ -58,12 +58,13 @@ export function ProductDrawer({ open, onOpenChange, mode, productId }: ProductDr
     "product-order-sources",
     { params: { search: undefined } },
   );
-  const { options: storagePlaceOptions, isPending: isStoragePlacesPending } = useDictionaryOptionsQuery("storage-places", {
-    params: { isActive: true, search: undefined },
-  });
+  const { options: productStoragePlaceOptions, isPending: isProductStoragePlacesPending } = useDictionaryOptionsQuery(
+    "product-storage-places",
+    { params: { isActive: true, search: undefined } },
+  );
 
   const isDictionariesPending =
-    isManufacturersPending || isActiveSubstancesPending || isProductOrderSourcesPending || isStoragePlacesPending;
+    isManufacturersPending || isActiveSubstancesPending || isProductOrderSourcesPending || isProductStoragePlacesPending;
 
   const defaultValues = useMemo(() => defaultCreateValues(), []);
 
@@ -398,22 +399,22 @@ export function ProductDrawer({ open, onOpenChange, mode, productId }: ProductDr
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Место хранения</label>
+                <label className="text-sm font-medium">Место хранения препарата</label>
                 <Controller
                   control={form.control}
-                  name="storagePlaceId"
+                  name="productStoragePlaceId"
                   render={({ field }) => (
                     <NativeSelect
                       value={field.value === 0 ? "" : field.value}
-                      options={storagePlaceOptions}
+                      options={productStoragePlaceOptions}
                       onValueChange={(next) => field.onChange(next === "" ? 0 : next)}
                       placeholder="Не выбрано"
                       disabled={isSubmitting}
                     />
                   )}
                 />
-                {form.formState.errors.storagePlaceId ? (
-                  <p className="text-xs text-destructive">{String(form.formState.errors.storagePlaceId.message)}</p>
+                {form.formState.errors.productStoragePlaceId ? (
+                  <p className="text-xs text-destructive">{String(form.formState.errors.productStoragePlaceId.message)}</p>
                 ) : null}
               </div>
 

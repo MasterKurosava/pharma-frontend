@@ -17,6 +17,7 @@ import {
 } from "@/pages/orders/orders-page";
 import { ProductsPage } from "@/pages/products/products-page";
 import { StoragePlacesPage } from "@/pages/storage-places/storage-places-page";
+import { ProductStoragePlacesPage } from "@/pages/product-storage-places/product-storage-places-page";
 import { ActiveSubstancesPage } from "@/pages/active-substances/active-substances-page";
 import { UsersPage } from "@/pages/users/users-page";
 import {
@@ -56,6 +57,7 @@ export const appRouter = createBrowserRouter([
           { path: "order-statuses-state", element: <StateOrderStatusesPage /> },
           { path: "users", element: <UsersPage /> },
           { path: "product-order-sources", element: <DictionaryResourcePage resource="product-order-sources" /> },
+          { path: "product-storage-places", element: <ProductStoragePlacesPage /> },
           { path: "storage-places", element: <StoragePlacesPage /> },
         ],
       },

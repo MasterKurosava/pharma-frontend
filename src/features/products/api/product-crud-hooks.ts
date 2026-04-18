@@ -17,7 +17,7 @@ function toListParams(params: ProductListParams | undefined) {
     activeSubstanceId: params.activeSubstanceId,
     availabilityStatus: params.availabilityStatus,
     productOrderSourceId: params.productOrderSourceId,
-    storagePlaceId: params.storagePlaceId,
+    productStoragePlaceId: params.productStoragePlaceId,
     isActive: params.isActive,
   };
 }
@@ -71,9 +71,9 @@ function upsertProductInList(
 
 function applyProductPatch(product: Product, dto: UpdateProductDto): Product {
   const next: Product = { ...product, ...dto };
-  if (dto.storagePlaceId !== undefined) {
-    next.storagePlaceId = dto.storagePlaceId;
-    next.storagePlace = dto.storagePlaceId === null ? null : next.storagePlace;
+  if (dto.productStoragePlaceId !== undefined) {
+    next.productStoragePlaceId = dto.productStoragePlaceId;
+    next.productStoragePlace = dto.productStoragePlaceId === null ? null : next.productStoragePlace;
   }
   const stockQuantity = dto.stockQuantity ?? product.stockQuantity;
   const reservedQuantity = dto.reservedQuantity ?? product.reservedQuantity;
@@ -120,8 +120,8 @@ export function useCreateProductMutation() {
         availabilityStatus: dto.availabilityStatus,
         availabilityStatusLabel: dto.availabilityStatus,
         productOrderSourceId: dto.productOrderSourceId,
-        storagePlaceId: dto.storagePlaceId,
-        storagePlace: undefined,
+        productStoragePlaceId: dto.productStoragePlaceId,
+        productStoragePlace: undefined,
         isActive: dto.isActive,
         stockQuantity: dto.stockQuantity,
         reservedQuantity: dto.reservedQuantity,

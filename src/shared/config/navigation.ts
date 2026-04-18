@@ -49,13 +49,14 @@ export const sidebarNavGroups: NavGroup[] = [
       { label: "Производители", to: "/manufacturers", icon: Factory },
       { label: "Активные вещества", to: "/active-substances", icon: Atom },
       { label: "Источники заказа препаратов", to: "/product-order-sources", icon: Building2 },
-      { label: "Места хранения", to: "/storage-places", icon: Warehouse },
+      { label: "Места хранения препаратов", to: "/product-storage-places", icon: Warehouse },
     ],
   },
   {
     label: "Справочники: заказы",
     icon: ClipboardCheck,
     items: [
+      { label: "Места хранения заказов", to: "/storage-places", icon: Warehouse },
       { label: "Статусы действия", to: "/order-statuses-action", icon: ClipboardCheck },
       { label: "Статусы состояния", to: "/order-statuses-state", icon: ClipboardCheck },
     ],

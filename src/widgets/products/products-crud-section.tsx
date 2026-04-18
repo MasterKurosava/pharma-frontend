@@ -35,7 +35,7 @@ export function ProductsCrudSection() {
   const [activeSubstanceId, setActiveSubstanceId] = useState<number | "">("");
   const [availabilityStatus, setAvailabilityStatus] = useState<ProductAvailabilityStatus | "">("");
   const [productOrderSourceId, setProductOrderSourceId] = useState<number | "">("");
-  const [storagePlaceId, setStoragePlaceId] = useState<number | "">("");
+  const [productStoragePlaceId, setProductStoragePlaceId] = useState<number | "">("");
   const [isActiveFilter, setIsActiveFilter] = useState<ActiveFilterValue>("all");
 
   const { options: manufacturerOptions, isPending: isManufacturersPending } = useDictionaryOptionsQuery("manufacturers", {
@@ -49,16 +49,17 @@ export function ProductsCrudSection() {
     "product-order-sources",
     { params: { isActive: true, search: undefined } },
   );
-  const { options: storagePlaceOptions, isPending: isStoragePlacesPending } = useDictionaryOptionsQuery("storage-places", {
-    params: { isActive: true, search: undefined },
-  });
+  const { options: productStoragePlaceOptions, isPending: isProductStoragePlacesPending } = useDictionaryOptionsQuery(
+    "product-storage-places",
+    { params: { isActive: true, search: undefined } },
+  );
 
   const isDictionariesPending =
-    isManufacturersPending || isActiveSubstancesPending || isProductOrderSourcesPending || isStoragePlacesPending;
+    isManufacturersPending || isActiveSubstancesPending || isProductOrderSourcesPending || isProductStoragePlacesPending;
 
   const manufacturerById = useMemo(() => mapOptionsToMap(manufacturerOptions), [manufacturerOptions]);
   const activeSubstanceById = useMemo(() => mapOptionsToMap(activeSubstanceOptions), [activeSubstanceOptions]);
-  const storagePlaceById = useMemo(() => mapOptionsToMap(storagePlaceOptions), [storagePlaceOptions]);
+  const productStoragePlaceById = useMemo(() => mapOptionsToMap(productStoragePlaceOptions), [productStoragePlaceOptions]);
   const availabilityStatusByCode = useMemo(() => {
     const map = new Map<string, { label: string; color?: string }>();
     for (const opt of PRODUCT_AVAILABILITY_OPTIONS) {
@@ -72,7 +73,7 @@ export function ProductsCrudSection() {
     activeSubstanceId: activeSubstanceId === "" ? undefined : activeSubstanceId,
     availabilityStatus: availabilityStatus === "" ? undefined : availabilityStatus,
     productOrderSourceId: productOrderSourceId === "" ? undefined : productOrderSourceId,
-    storagePlaceId: storagePlaceId === "" ? undefined : storagePlaceId,
+    productStoragePlaceId: productStoragePlaceId === "" ? undefined : productStoragePlaceId,
     isActive: isActiveFilter === "all" ? undefined : isActiveFilter === "active",
   });
 
@@ -121,19 +122,19 @@ export function ProductsCrudSection() {
         sortAccessor: (row) => activeSubstanceById.get(row.activeSubstanceId) ?? "",
       },
       {
-        id: "storagePlaceId",
+        id: "productStoragePlaceId",
         header: "Место хранения",
         cell: (row) => {
-          const id = row.storagePlaceId ?? undefined;
+          const id = row.productStoragePlaceId ?? undefined;
           const label =
-            (id !== undefined ? storagePlaceById.get(id) : undefined) ?? row.storagePlace?.name ?? "—";
+            (id !== undefined ? productStoragePlaceById.get(id) : undefined) ?? row.productStoragePlace?.name ?? "—";
           return <span>{label}</span>;
         },
         sortable: true,
         sortAccessor: (row) =>
-          (row.storagePlaceId !== undefined && row.storagePlaceId !== null
-            ? storagePlaceById.get(row.storagePlaceId)
-            : undefined) ?? row.storagePlace?.name ?? "",
+          (row.productStoragePlaceId !== undefined && row.productStoragePlaceId !== null
+            ? productStoragePlaceById.get(row.productStoragePlaceId)
+            : undefined) ?? row.productStoragePlace?.name ?? "",
       },
       {
         id: "availabilityStatus",
@@ -232,7 +233,7 @@ export function ProductsCrudSection() {
   }, [
     activeSubstanceById,
     manufacturerById,
-    storagePlaceById,
+    productStoragePlaceById,
     availabilityStatusByCode,
     openEdit,
     handleDelete,
@@ -245,7 +246,7 @@ export function ProductsCrudSection() {
     setActiveSubstanceId("");
     setAvailabilityStatus("");
     setProductOrderSourceId("");
-    setStoragePlaceId("");
+    setProductStoragePlaceId("");
     setIsActiveFilter("all");
   };
 
@@ -306,9 +307,9 @@ export function ProductsCrudSection() {
 
             <div className="w-full sm:w-[200px]">
               <NativeSelect
-                value={storagePlaceId}
-                options={storagePlaceOptions}
-                onValueChange={(next) => setStoragePlaceId(next)}
+                value={productStoragePlaceId}
+                options={productStoragePlaceOptions}
+                onValueChange={(next) => setProductStoragePlaceId(next)}
                 placeholder="Место хранения"
                 disabled={isDictionariesPending}
               />

@@ -1,6 +1,6 @@
 import type { ProductAvailabilityStatus } from "@/shared/config/product-availability";
 
-export type ProductStoragePlace = {
+export type ProductStoragePlaceInfo = {
   id: number;
   name: string;
   description?: string | null;
@@ -14,8 +14,8 @@ export type Product = {
   availabilityStatus: ProductAvailabilityStatus;
   availabilityStatusLabel?: string;
   productOrderSourceId?: number | null;
-  storagePlaceId?: number | null;
-  storagePlace?: ProductStoragePlace | null;
+  productStoragePlaceId?: number | null;
+  productStoragePlace?: ProductStoragePlaceInfo | null;
   isActive: boolean;
   stockQuantity: number;
   reservedQuantity: number;
@@ -33,7 +33,7 @@ export type ProductListParams = {
   activeSubstanceId?: number;
   availabilityStatus?: ProductAvailabilityStatus;
   productOrderSourceId?: number;
-  storagePlaceId?: number;
+  productStoragePlaceId?: number;
   isActive?: boolean;
 };
 
@@ -44,7 +44,7 @@ export type CreateProductDto = {
   activeSubstanceId: number;
   availabilityStatus: ProductAvailabilityStatus;
   productOrderSourceId?: number;
-  storagePlaceId?: number;
+  productStoragePlaceId?: number;
   isActive: boolean;
   stockQuantity: number;
   reservedQuantity: number;
@@ -59,11 +59,10 @@ export type UpdateProductDto = {
   activeSubstanceId?: number;
   availabilityStatus?: ProductAvailabilityStatus;
   productOrderSourceId?: number;
-  storagePlaceId?: number | null;
+  productStoragePlaceId?: number | null;
   isActive?: boolean;
   stockQuantity?: number;
   reservedQuantity?: number;
   imageUrl?: string | null;
   description?: string | null;
 };
-

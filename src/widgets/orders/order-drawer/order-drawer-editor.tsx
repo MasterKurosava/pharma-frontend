@@ -372,7 +372,7 @@ export function OrderDrawerEditor({ open, onOpenChange, orderId, onCreated }: Or
                     </LabeledField>
                   )} />
                   <Controller control={form.control} name="storagePlaceId" render={({ field }) => (
-                    <LabeledField label="Место хранения" error={form.formState.errors.storagePlaceId?.message}>
+                    <LabeledField label="Место хранения заказа" error={form.formState.errors.storagePlaceId?.message}>
                       <NativeSelect value={field.value === 0 ? "" : field.value} options={storagePlacesOptions.options} onValueChange={(next) => field.onChange(next === "" ? 0 : next)} placeholder="Хранилище" disabled={isSubmitting || !canEditField("storagePlaceId")} className={cn(form.formState.errors.storagePlaceId ? "border-destructive ring-destructive/30" : null)} />
                     </LabeledField>
                   )} />

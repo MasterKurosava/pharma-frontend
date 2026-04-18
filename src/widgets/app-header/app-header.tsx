@@ -17,7 +17,8 @@ const titles: Record<string, string> = {
   "/active-substances": "Активные вещества",
   "/users": "Пользователи и роли",
   "/product-order-sources": "Источники заказа препаратов",
-  "/storage-places": "Места хранения",
+  "/product-storage-places": "Места хранения препаратов",
+  "/storage-places": "Места хранения заказов",
 };
 
 export function AppHeader() {
