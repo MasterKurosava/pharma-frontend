@@ -16,6 +16,7 @@ import {
   OrdersRkDeliveryPage,
 } from "@/pages/orders/orders-page";
 import { ProductsPage } from "@/pages/products/products-page";
+import { StoragePlacesPage } from "@/pages/storage-places/storage-places-page";
 import { ActiveSubstancesPage } from "@/pages/active-substances/active-substances-page";
 import { UsersPage } from "@/pages/users/users-page";
 import {
@@ -55,7 +56,7 @@ export const appRouter = createBrowserRouter([
           { path: "order-statuses-state", element: <StateOrderStatusesPage /> },
           { path: "users", element: <UsersPage /> },
           { path: "product-order-sources", element: <DictionaryResourcePage resource="product-order-sources" /> },
-          { path: "storage-places", element: <DictionaryResourcePage resource="storage-places" /> },
+          { path: "storage-places", element: <StoragePlacesPage /> },
         ],
       },
     ],
