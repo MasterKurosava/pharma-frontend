@@ -2,9 +2,17 @@ import type { Product, CreateProductDto, UpdateProductDto } from "@/entities/pro
 import type { ProductFormValues } from "@/features/products/model/product-form-schema";
 import type { ProductAvailabilityStatus } from "@/shared/config/product-availability";
 
+function parseProductPrice(value: Product["price"]): number {
+  if (value === undefined || value === null) return 0;
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+  const n = Number(String(value).replace(",", "."));
+  return Number.isFinite(n) ? n : 0;
+}
+
 export function productApiToFormValues(product: Product): ProductFormValues {
   return {
     name: product.name,
+    price: parseProductPrice(product.price),
     manufacturerId: product.manufacturerId,
     activeSubstanceId: product.activeSubstanceId,
     availabilityStatus: (product.availabilityStatus ?? "IN_STOCK") as ProductAvailabilityStatus,
@@ -20,6 +28,7 @@ export function productApiToFormValues(product: Product): ProductFormValues {
 export function productFormValuesToCreateDto(values: ProductFormValues): CreateProductDto {
   return {
     name: values.name,
+    price: values.price,
     manufacturerId: values.manufacturerId,
     activeSubstanceId: values.activeSubstanceId,
     availabilityStatus: values.availabilityStatus,
@@ -35,6 +44,7 @@ export function productFormValuesToCreateDto(values: ProductFormValues): CreateP
 export function productFormValuesToUpdateDto(values: ProductFormValues): UpdateProductDto {
   return {
     name: values.name,
+    price: values.price,
     manufacturerId: values.manufacturerId,
     activeSubstanceId: values.activeSubstanceId,
     availabilityStatus: values.availabilityStatus,

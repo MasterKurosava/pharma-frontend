@@ -30,6 +30,7 @@ export type ProductListParams = {
 
 export type CreateProductDto = {
   name: string;
+  price: number;
   manufacturerId: number;
   activeSubstanceId: number;
   availabilityStatus: ProductAvailabilityStatus;
@@ -43,6 +44,7 @@ export type CreateProductDto = {
 
 export type UpdateProductDto = {
   name?: string;
+  price?: number;
   manufacturerId?: number;
   activeSubstanceId?: number;
   availabilityStatus?: ProductAvailabilityStatus;

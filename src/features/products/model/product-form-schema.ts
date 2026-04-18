@@ -7,6 +7,7 @@ const productAvailabilitySchema = z.union([
 
 export const productFormSchema = z.object({
   name: z.string().trim().min(1, "Название обязательно").max(200, "Слишком длинное название"),
+  price: z.number().min(0, "Цена не может быть отрицательной"),
   manufacturerId: z.number().int().positive("Выберите производителя"),
   activeSubstanceId: z.number().int().positive("Выберите действующее вещество"),
   availabilityStatus: productAvailabilitySchema,

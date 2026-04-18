@@ -28,6 +28,7 @@ type ProductDrawerProps = {
 function defaultCreateValues(): ProductFormValues {
   return {
     name: "",
+    price: 0,
     manufacturerId: 0,
     activeSubstanceId: 0,
     availabilityStatus: PRODUCT_AVAILABILITY_OPTIONS[2].value,
@@ -234,7 +235,7 @@ export function ProductDrawer({ open, onOpenChange, mode, productId }: ProductDr
         <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
           <div className="space-y-3 rounded-xl border bg-muted/30 p-4">
             <h3 className="text-sm font-semibold">Основное</h3>
-            <div className="grid gap-4">
+            <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <label className="text-sm font-medium" htmlFor="product-name">
                   Название
@@ -249,6 +250,30 @@ export function ProductDrawer({ open, onOpenChange, mode, productId }: ProductDr
                   <p className="text-xs text-destructive">{String(form.formState.errors.name.message)}</p>
                 ) : null}
               </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="product-price">
+                  Цена
+                </label>
+                <Input
+                  id="product-price"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  placeholder="0"
+                  {...form.register("price", {
+                    setValueAs: (v) => {
+                      if (v === "" || v === null || v === undefined) return 0;
+                      const n = typeof v === "number" ? v : Number(v);
+                      return Number.isNaN(n) ? 0 : n;
+                    },
+                  })}
+                  disabled={isSubmitting}
+                />
+                {form.formState.errors.price ? (
+                  <p className="text-xs text-destructive">{String(form.formState.errors.price.message)}</p>
+                ) : null}
+              </div>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
@@ -258,7 +283,8 @@ export function ProductDrawer({ open, onOpenChange, mode, productId }: ProductDr
                 </label>
                 <textarea
                   id="product-description"
-                  className="min-h-[92px] w-full resize-none rounded-md border border-input bg-white px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                  rows={1}
+                  className="flex h-10 min-h-10 w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                   {...form.register("description")}
                   disabled={isSubmitting}
                 />
