@@ -1,5 +1,11 @@
 import type { ProductAvailabilityStatus } from "@/shared/config/product-availability";
 
+export type ProductStoragePlace = {
+  id: number;
+  name: string;
+  description?: string | null;
+};
+
 export type Product = {
   id: number;
   name: string;
@@ -8,6 +14,8 @@ export type Product = {
   availabilityStatus: ProductAvailabilityStatus;
   availabilityStatusLabel?: string;
   productOrderSourceId?: number | null;
+  storagePlaceId?: number | null;
+  storagePlace?: ProductStoragePlace | null;
   isActive: boolean;
   stockQuantity: number;
   reservedQuantity: number;
@@ -25,6 +33,7 @@ export type ProductListParams = {
   activeSubstanceId?: number;
   availabilityStatus?: ProductAvailabilityStatus;
   productOrderSourceId?: number;
+  storagePlaceId?: number;
   isActive?: boolean;
 };
 
@@ -35,6 +44,7 @@ export type CreateProductDto = {
   activeSubstanceId: number;
   availabilityStatus: ProductAvailabilityStatus;
   productOrderSourceId?: number;
+  storagePlaceId?: number;
   isActive: boolean;
   stockQuantity: number;
   reservedQuantity: number;
@@ -49,6 +59,7 @@ export type UpdateProductDto = {
   activeSubstanceId?: number;
   availabilityStatus?: ProductAvailabilityStatus;
   productOrderSourceId?: number;
+  storagePlaceId?: number | null;
   isActive?: boolean;
   stockQuantity?: number;
   reservedQuantity?: number;

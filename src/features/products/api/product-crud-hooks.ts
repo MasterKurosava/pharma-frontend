@@ -17,6 +17,7 @@ function toListParams(params: ProductListParams | undefined) {
     activeSubstanceId: params.activeSubstanceId,
     availabilityStatus: params.availabilityStatus,
     productOrderSourceId: params.productOrderSourceId,
+    storagePlaceId: params.storagePlaceId,
     isActive: params.isActive,
   };
 }
@@ -70,6 +71,10 @@ function upsertProductInList(
 
 function applyProductPatch(product: Product, dto: UpdateProductDto): Product {
   const next: Product = { ...product, ...dto };
+  if (dto.storagePlaceId !== undefined) {
+    next.storagePlaceId = dto.storagePlaceId;
+    next.storagePlace = dto.storagePlaceId === null ? null : next.storagePlace;
+  }
   const stockQuantity = dto.stockQuantity ?? product.stockQuantity;
   const reservedQuantity = dto.reservedQuantity ?? product.reservedQuantity;
   next.availableQuantity = Math.max(0, stockQuantity - reservedQuantity);
@@ -115,6 +120,8 @@ export function useCreateProductMutation() {
         availabilityStatus: dto.availabilityStatus,
         availabilityStatusLabel: dto.availabilityStatus,
         productOrderSourceId: dto.productOrderSourceId,
+        storagePlaceId: dto.storagePlaceId,
+        storagePlace: undefined,
         isActive: dto.isActive,
         stockQuantity: dto.stockQuantity,
         reservedQuantity: dto.reservedQuantity,

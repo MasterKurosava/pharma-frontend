@@ -35,6 +35,7 @@ export function ProductsCrudSection() {
   const [activeSubstanceId, setActiveSubstanceId] = useState<number | "">("");
   const [availabilityStatus, setAvailabilityStatus] = useState<ProductAvailabilityStatus | "">("");
   const [productOrderSourceId, setProductOrderSourceId] = useState<number | "">("");
+  const [storagePlaceId, setStoragePlaceId] = useState<number | "">("");
   const [isActiveFilter, setIsActiveFilter] = useState<ActiveFilterValue>("all");
 
   const { options: manufacturerOptions, isPending: isManufacturersPending } = useDictionaryOptionsQuery("manufacturers", {
@@ -48,12 +49,16 @@ export function ProductsCrudSection() {
     "product-order-sources",
     { params: { isActive: true, search: undefined } },
   );
+  const { options: storagePlaceOptions, isPending: isStoragePlacesPending } = useDictionaryOptionsQuery("storage-places", {
+    params: { isActive: true, search: undefined },
+  });
 
   const isDictionariesPending =
-    isManufacturersPending || isActiveSubstancesPending || isProductOrderSourcesPending;
+    isManufacturersPending || isActiveSubstancesPending || isProductOrderSourcesPending || isStoragePlacesPending;
 
   const manufacturerById = useMemo(() => mapOptionsToMap(manufacturerOptions), [manufacturerOptions]);
   const activeSubstanceById = useMemo(() => mapOptionsToMap(activeSubstanceOptions), [activeSubstanceOptions]);
+  const storagePlaceById = useMemo(() => mapOptionsToMap(storagePlaceOptions), [storagePlaceOptions]);
   const availabilityStatusByCode = useMemo(() => {
     const map = new Map<string, { label: string; color?: string }>();
     for (const opt of PRODUCT_AVAILABILITY_OPTIONS) {
@@ -67,6 +72,7 @@ export function ProductsCrudSection() {
     activeSubstanceId: activeSubstanceId === "" ? undefined : activeSubstanceId,
     availabilityStatus: availabilityStatus === "" ? undefined : availabilityStatus,
     productOrderSourceId: productOrderSourceId === "" ? undefined : productOrderSourceId,
+    storagePlaceId: storagePlaceId === "" ? undefined : storagePlaceId,
     isActive: isActiveFilter === "all" ? undefined : isActiveFilter === "active",
   });
 
@@ -113,6 +119,21 @@ export function ProductsCrudSection() {
         cell: (row) => <span>{activeSubstanceById.get(row.activeSubstanceId) ?? "—"}</span>,
         sortable: true,
         sortAccessor: (row) => activeSubstanceById.get(row.activeSubstanceId) ?? "",
+      },
+      {
+        id: "storagePlaceId",
+        header: "Место хранения",
+        cell: (row) => {
+          const id = row.storagePlaceId ?? undefined;
+          const label =
+            (id !== undefined ? storagePlaceById.get(id) : undefined) ?? row.storagePlace?.name ?? "—";
+          return <span>{label}</span>;
+        },
+        sortable: true,
+        sortAccessor: (row) =>
+          (row.storagePlaceId !== undefined && row.storagePlaceId !== null
+            ? storagePlaceById.get(row.storagePlaceId)
+            : undefined) ?? row.storagePlace?.name ?? "",
       },
       {
         id: "availabilityStatus",
@@ -208,7 +229,15 @@ export function ProductsCrudSection() {
         ),
       },
     ];
-  }, [activeSubstanceById, manufacturerById, availabilityStatusByCode, openEdit, handleDelete, isDeletingProduct]);
+  }, [
+    activeSubstanceById,
+    manufacturerById,
+    storagePlaceById,
+    availabilityStatusByCode,
+    openEdit,
+    handleDelete,
+    isDeletingProduct,
+  ]);
 
   const onResetFilters = () => {
     setSearch("");
@@ -216,6 +245,7 @@ export function ProductsCrudSection() {
     setActiveSubstanceId("");
     setAvailabilityStatus("");
     setProductOrderSourceId("");
+    setStoragePlaceId("");
     setIsActiveFilter("all");
   };
 
@@ -270,6 +300,16 @@ export function ProductsCrudSection() {
                 options={productOrderSourceOptions}
                 onValueChange={(next) => setProductOrderSourceId(next)}
                 placeholder="Источник поступления"
+                disabled={isDictionariesPending}
+              />
+            </div>
+
+            <div className="w-full sm:w-[200px]">
+              <NativeSelect
+                value={storagePlaceId}
+                options={storagePlaceOptions}
+                onValueChange={(next) => setStoragePlaceId(next)}
+                placeholder="Место хранения"
                 disabled={isDictionariesPending}
               />
             </div>

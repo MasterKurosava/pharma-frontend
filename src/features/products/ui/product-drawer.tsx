@@ -33,6 +33,7 @@ function defaultCreateValues(): ProductFormValues {
     activeSubstanceId: 0,
     availabilityStatus: PRODUCT_AVAILABILITY_OPTIONS[2].value,
     productOrderSourceId: 0,
+    storagePlaceId: 0,
     stockQuantity: 0,
     reservedQuantity: 0,
     imageUrl: "",
@@ -57,9 +58,12 @@ export function ProductDrawer({ open, onOpenChange, mode, productId }: ProductDr
     "product-order-sources",
     { params: { search: undefined } },
   );
+  const { options: storagePlaceOptions, isPending: isStoragePlacesPending } = useDictionaryOptionsQuery("storage-places", {
+    params: { isActive: true, search: undefined },
+  });
 
   const isDictionariesPending =
-    isManufacturersPending || isActiveSubstancesPending || isProductOrderSourcesPending;
+    isManufacturersPending || isActiveSubstancesPending || isProductOrderSourcesPending || isStoragePlacesPending;
 
   const defaultValues = useMemo(() => defaultCreateValues(), []);
 
@@ -390,6 +394,26 @@ export function ProductDrawer({ open, onOpenChange, mode, productId }: ProductDr
                 />
                 {form.formState.errors.productOrderSourceId ? (
                   <p className="text-xs text-destructive">{String(form.formState.errors.productOrderSourceId.message)}</p>
+                ) : null}
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Место хранения</label>
+                <Controller
+                  control={form.control}
+                  name="storagePlaceId"
+                  render={({ field }) => (
+                    <NativeSelect
+                      value={field.value === 0 ? "" : field.value}
+                      options={storagePlaceOptions}
+                      onValueChange={(next) => field.onChange(next === "" ? 0 : next)}
+                      placeholder="Не выбрано"
+                      disabled={isSubmitting}
+                    />
+                  )}
+                />
+                {form.formState.errors.storagePlaceId ? (
+                  <p className="text-xs text-destructive">{String(form.formState.errors.storagePlaceId.message)}</p>
                 ) : null}
               </div>
 

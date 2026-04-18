@@ -12,6 +12,7 @@ export const productFormSchema = z.object({
   activeSubstanceId: z.number().int().positive("Выберите действующее вещество"),
   availabilityStatus: productAvailabilitySchema,
   productOrderSourceId: z.number().int().nonnegative(),
+  storagePlaceId: z.number().int().nonnegative(),
   stockQuantity: z.number().int().min(0, "Запас не может быть отрицательным"),
   reservedQuantity: z.number().int().min(0, "Резерв не может быть отрицательным"),
   imageUrl: z
