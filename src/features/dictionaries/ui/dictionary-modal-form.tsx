@@ -88,7 +88,6 @@ export function DictionaryModalForm({ open, onOpenChange, resource, mode, initia
       toast.success(`${config.singularLabel} обновлен`);
       onOpenChange(false);
     } catch (error) {
-      // Errors for mutations are already toasted in hooks, but keep a fallback for unexpected shapes.
       toast.error(getApiErrorMessage(error, "Что-то пошло не так"));
     }
   };

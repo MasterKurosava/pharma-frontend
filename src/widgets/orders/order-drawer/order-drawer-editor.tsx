@@ -83,6 +83,8 @@ function getProductUnitPrice(product: Product): number {
   return Number(product.price ?? 0);
 }
 
+const MAX_MONEY_KZT = 99999999.99;
+
 export function OrderDrawerEditor({ open, onOpenChange, orderId, onCreated }: OrderDrawerEditorProps) {
   const { user } = useAuth();
   const isCreateMode = Number(orderId ?? 0) === 0;
@@ -149,8 +151,6 @@ export function OrderDrawerEditor({ open, onOpenChange, orderId, onCreated }: Or
 
   useEffect(() => {
     if (!open) return;
-    // If the product is not present in the "active products" list (or still loading),
-    // keep the current productPrice instead of forcing 0 (otherwise totals/remaining become 0).
     const currentProductPrice = Number(form.getValues("productPrice") ?? 0);
     const resolvedProductPrice = productPriceMap.get(Number(watchedProductId));
     const unitPrice =
@@ -226,7 +226,6 @@ export function OrderDrawerEditor({ open, onOpenChange, orderId, onCreated }: Or
           for (const [field, messages] of Object.entries(fieldErrors)) {
             const msg = Array.isArray(messages) ? messages.filter(Boolean).join("\n") : String(messages ?? "");
             if (!msg) continue;
-            // We only set errors for known form fields; unknown paths fall back to toast.
             form.setError(field as never, { message: msg });
             applied += 1;
           }
@@ -236,7 +235,6 @@ export function OrderDrawerEditor({ open, onOpenChange, orderId, onCreated }: Or
           }
         }
       }
-      // Fallback toast is already shown by mutations, but keep a generic one for safety.
       toast.error("Не удалось сохранить заказ");
     }
   };
@@ -308,7 +306,22 @@ export function OrderDrawerEditor({ open, onOpenChange, orderId, onCreated }: Or
                   )} />
                   <Controller control={form.control} name="quantity" render={({ field }) => (
                     <LabeledField label="Количество" error={form.formState.errors.quantity?.message}>
-                      <Input type="number" min={1} value={field.value} onChange={(e) => field.onChange(Number(e.target.value || 1))} className={cn("bg-white", form.formState.errors.quantity ? "border-destructive ring-destructive/30" : null)} disabled={isSubmitting || !canEditField("quantity")} />
+                      <Input
+                        type="number"
+                        inputMode="numeric"
+                        min={1}
+                        value={field.value === 0 ? "" : field.value}
+                        onChange={(e) => {
+                          const raw = e.target.value;
+                          if (raw === "") {
+                            field.onChange(0);
+                            return;
+                          }
+                          field.onChange(Number(raw));
+                        }}
+                        className={cn("bg-white", form.formState.errors.quantity ? "border-destructive ring-destructive/30" : null)}
+                        disabled={isSubmitting || !canEditField("quantity")}
+                      />
                     </LabeledField>
                   )} />
                 </div>
@@ -326,8 +339,29 @@ export function OrderDrawerEditor({ open, onOpenChange, orderId, onCreated }: Or
                     </LabeledField>
                   )} />
                   <Controller control={form.control} name="deliveryPrice" render={({ field }) => (
-                    <LabeledField label="Стоимость доставки" error={form.formState.errors.deliveryPrice?.message}>
-                      <Input type="number" min={0} value={field.value} onChange={(e) => field.onChange(Number(e.target.value || 0))} className={cn("bg-white", form.formState.errors.deliveryPrice ? "border-destructive ring-destructive/30" : null)} disabled={isSubmitting || !canEditField("deliveryPrice")} />
+                    <LabeledField
+                      label="Стоимость доставки"
+                      hint={`Максимум: ${MAX_MONEY_KZT}`}
+                      error={form.formState.errors.deliveryPrice?.message}
+                    >
+                      <Input
+                        type="number"
+                        inputMode="decimal"
+                        min={0}
+                        max={MAX_MONEY_KZT}
+                        step="0.01"
+                        value={field.value === 0 ? "" : field.value}
+                        onChange={(e) => {
+                          const raw = e.target.value;
+                          if (raw === "") {
+                            field.onChange(0);
+                            return;
+                          }
+                          field.onChange(Number(raw));
+                        }}
+                        className={cn("bg-white", form.formState.errors.deliveryPrice ? "border-destructive ring-destructive/30" : null)}
+                        disabled={isSubmitting || !canEditField("deliveryPrice")}
+                      />
                     </LabeledField>
                   )} />
                   <Controller control={form.control} name="address" render={({ field }) => (

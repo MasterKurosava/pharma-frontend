@@ -137,6 +137,7 @@ export function useOptimisticUpdateOrderStatusMutation() {
     onSuccess: (order) => {
       queryClient.setQueryData(ordersQueryKeys.detail(order.id), order);
       patchOrderInLists(queryClient, ordersQueryKeys.lists(), order.id, order);
+      queryClient.invalidateQueries({ queryKey: ordersQueryKeys.lists(), exact: false });
     },
     onError: (error, _variables, context) => {
       restoreOrderListSnapshots(queryClient, context?.listSnapshots ?? []);
@@ -182,6 +183,7 @@ export function useOptimisticBulkUpdateOrdersStatusMutation() {
     },
     onSuccess: (count) => {
       toast.success(`Обновлено заказов: ${count}`);
+      queryClient.invalidateQueries({ queryKey: ordersQueryKeys.lists(), exact: false });
     },
     onError: (error, _variables, context) => {
       restoreOrderListSnapshots(queryClient, context?.listSnapshots ?? []);

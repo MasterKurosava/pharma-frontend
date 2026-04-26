@@ -8,7 +8,6 @@ export type DictionaryResourceName =
 export type DictionaryItem = {
   id: number;
   name: string;
-  // Keep label for backward compatibility in existing UI components.
   label: string;
   code?: string;
   color?: string;

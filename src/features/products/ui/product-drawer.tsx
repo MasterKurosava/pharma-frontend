@@ -143,8 +143,6 @@ export function ProductDrawer({ open, onOpenChange, mode, productId }: ProductDr
       toast.success("Препарат обновлен");
       onOpenChange(false);
     } catch {
-      // Errors are already toasted in mutations (onError),
-      // but we keep a catch to avoid unhandled promise rejections.
     }
   };
 
@@ -264,8 +262,9 @@ export function ProductDrawer({ open, onOpenChange, mode, productId }: ProductDr
                   id="product-price"
                   type="number"
                   min={0}
+                  max={99999999.99}
                   step="0.01"
-                  placeholder="0"
+                  placeholder=""
                   {...form.register("price", {
                     setValueAs: (v) => {
                       if (v === "" || v === null || v === undefined) return 0;
@@ -275,6 +274,7 @@ export function ProductDrawer({ open, onOpenChange, mode, productId }: ProductDr
                   })}
                   disabled={isSubmitting}
                 />
+                <p className="text-[11px] text-muted-foreground">Максимум: 99999999.99</p>
                 {form.formState.errors.price ? (
                   <p className="text-xs text-destructive">{String(form.formState.errors.price.message)}</p>
                 ) : null}

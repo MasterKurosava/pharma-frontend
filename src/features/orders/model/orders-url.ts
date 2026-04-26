@@ -42,7 +42,6 @@ function parseIntOrUndefined(value: string | null): number | undefined {
 
 function parseDate(value: string | null): string | undefined {
   if (!value) return undefined;
-  // Accept ISO-like dates: YYYY-MM-DD
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return undefined;
   return value;
 }

@@ -15,7 +15,7 @@ import { Card } from "@/shared/ui/card";
 import { DataTable, type DataTableColumn } from "@/shared/ui/data-table/data-table";
 import { Input } from "@/shared/ui/input";
 import { ModalShell } from "@/shared/ui/modal-shell";
-import { NativeSelect } from "@/shared/ui/native-select/native-select";
+// NativeSelect is intentionally not used here now: table groups are multi-select checkboxes.
 
 type Props = {
   type: OrderStatusType;
@@ -26,7 +26,7 @@ type Props = {
 type StatusFormState = {
   name: string;
   color: string;
-  tableGroup: OrderTableGroup | "";
+  tableGroups: OrderTableGroup[];
   reserveOnSet: boolean;
   writeOffOnSet: boolean;
   setAssemblyDateOnSet: boolean;
@@ -37,7 +37,7 @@ type StatusFormState = {
 const emptyForm: StatusFormState = {
   name: "",
   color: "",
-  tableGroup: "",
+  tableGroups: [],
   reserveOnSet: false,
   writeOffOnSet: false,
   setAssemblyDateOnSet: false,
@@ -67,7 +67,7 @@ export function OrderStatusesManagementSection({ type, title, emptyDescription }
     setForm({
       name: status.name,
       color: status.color ?? "",
-      tableGroup: status.tableGroup ?? "",
+      tableGroups: status.tableGroups ?? [],
       reserveOnSet: status.reserveOnSet,
       writeOffOnSet: status.writeOffOnSet,
       setAssemblyDateOnSet: status.setAssemblyDateOnSet,
@@ -82,7 +82,7 @@ export function OrderStatusesManagementSection({ type, title, emptyDescription }
     const dto: UpdateOrderStatusConfigDto = {
       name: form.name.trim(),
       color: form.color.trim() || null,
-      tableGroup: type === "STATE" ? (form.tableGroup || null) : null,
+      tableGroups: form.tableGroups,
       reserveOnSet: type === "ACTION" ? form.reserveOnSet : false,
       writeOffOnSet: type === "ACTION" ? form.writeOffOnSet : false,
       setAssemblyDateOnSet: type === "ACTION" ? form.setAssemblyDateOnSet : false,
@@ -109,16 +109,12 @@ export function OrderStatusesManagementSection({ type, title, emptyDescription }
         </div>
       ),
     },
-    ...(type === "STATE"
-      ? ([
-          {
-            id: "tableGroup",
-            header: "Таблица",
-            cell: (row: OrderStatusConfigItem) =>
-              row.tableGroup ? ORDER_TABLE_GROUP_LABELS[row.tableGroup] : "—",
-          },
-        ] satisfies Array<DataTableColumn<OrderStatusConfigItem>>)
-      : []),
+    {
+      id: "tableGroups",
+      header: "Таблица(ы)",
+      cell: (row: OrderStatusConfigItem) =>
+        row.tableGroups?.length ? row.tableGroups.map((g) => ORDER_TABLE_GROUP_LABELS[g]).join(", ") : "—",
+    },
     ...(type === "ACTION"
       ? ([
           {
@@ -186,16 +182,32 @@ export function OrderStatusesManagementSection({ type, title, emptyDescription }
             <Input value={form.color} onChange={(e) => setForm((p) => ({ ...p, color: e.target.value }))} />
           </div>
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">Таблица</label>
-            <NativeSelect
-              value={form.tableGroup}
-              options={tableGroupOptions}
-              onValueChange={(next) =>
-                setForm((p) => ({ ...p, tableGroup: (next as OrderTableGroup) || "" }))
-              }
-              placeholder="Не выбрано"
-              disabled={type !== "STATE"}
-            />
+            <label className="text-sm font-medium">Таблицы</label>
+            <div className="grid gap-2 rounded-xl border bg-card p-3 sm:grid-cols-2">
+              {tableGroupOptions.map((opt) => {
+                const value = opt.value as OrderTableGroup;
+                const checked = form.tableGroups.includes(value);
+                return (
+                  <label key={String(opt.value)} className="inline-flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={(e) => {
+                        const nextChecked = e.target.checked;
+                        setForm((p) => {
+                          const current = p.tableGroups;
+                          if (nextChecked) {
+                            return current.includes(value) ? p : { ...p, tableGroups: [...current, value] };
+                          }
+                          return { ...p, tableGroups: current.filter((g) => g !== value) };
+                        });
+                      }}
+                    />
+                    {opt.label}
+                  </label>
+                );
+              })}
+            </div>
           </div>
           <div className="space-y-1.5">
             <label className="text-sm font-medium">Порядок</label>

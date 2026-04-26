@@ -6,7 +6,7 @@ export type OrderStatusConfigItem = {
   type: OrderStatusType;
   name: string;
   color?: string | null;
-  tableGroup?: OrderTableGroup | null;
+  tableGroups: OrderTableGroup[];
   reserveOnSet: boolean;
   writeOffOnSet: boolean;
   setAssemblyDateOnSet: boolean;
@@ -17,7 +17,7 @@ export type OrderStatusConfigItem = {
 export type UpdateOrderStatusConfigDto = {
   name?: string;
   color?: string | null;
-  tableGroup?: OrderTableGroup | null;
+  tableGroups?: OrderTableGroup[];
   reserveOnSet?: boolean;
   writeOffOnSet?: boolean;
   setAssemblyDateOnSet?: boolean;
