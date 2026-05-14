@@ -3,7 +3,14 @@ import { useSearchParams } from "react-router-dom";
 import { Check, Plus } from "lucide-react";
 import * as AlertDialog from "@radix-ui/react-alert-dialog";
 
-import { ordersUrlDefaults, parseOrdersSearchParams, serializeOrdersSearchParams, type OrdersFiltersState, type OrdersListUrlState } from "@/features/orders/model/orders-url";
+import {
+  canonicalStateStatusCodesKey,
+  ordersUrlDefaults,
+  parseOrdersSearchParams,
+  serializeOrdersSearchParams,
+  type OrdersFiltersState,
+  type OrdersListUrlState,
+} from "@/features/orders/model/orders-url";
 import { useAuth } from "@/features/auth/model/use-auth";
 import { useOrdersListQuery } from "@/features/orders/api/orders-queries";
 import { useOrderFilterOptions } from "@/features/orders/model/use-order-filter-options";
@@ -69,7 +76,7 @@ export function OrdersListWidget({ forcedOrderStatuses, forcedTableGroup }: Orde
       paymentStatus: effectiveState.paymentStatus,
       actionStatusCode: effectiveState.actionStatusCode,
       actionStatusCodes: forcedOrderStatuses,
-      stateStatusCode: effectiveState.stateStatusCode,
+      stateStatusCodes: effectiveState.stateStatusCodes,
       page: effectiveState.page,
       pageSize: effectiveState.pageSize,
       sortBy: effectiveState.sortBy,
@@ -130,17 +137,28 @@ export function OrdersListWidget({ forcedOrderStatuses, forcedTableGroup }: Orde
   }, [allowedTableGroups, setUrl, urlState.tableGroup]);
 
   const applyFilterPatch = useCallback((patch: Partial<OrdersFiltersState> & { sortBy?: OrdersListUrlState["sortBy"]; sortOrder?: OrdersListUrlState["sortOrder"]; pageSize?: number }) => {
+    const valuesEqual = (key: string, patchValue: unknown, currentValue: unknown): boolean => {
+      if (key === "stateStatusCodes") {
+        return canonicalStateStatusCodesKey(patchValue as StateStatusCode[] | undefined)
+          === canonicalStateStatusCodesKey(currentValue as StateStatusCode[] | undefined);
+      }
+      return patchValue === currentValue;
+    };
+
     const changedKeys = Object.keys(patch).filter((key) => {
       const patchValue = patch[key as keyof typeof patch];
       const currentValue = urlState[key as keyof OrdersListUrlState];
-      return patchValue !== currentValue;
+      return !valuesEqual(key, patchValue, currentValue);
     });
     if (changedKeys.length === 0) return;
 
     const hasPageSize = typeof patch.pageSize !== "undefined";
     const shouldResetPage =
       hasPageSize ||
-      ORDER_FILTER_PATCH_RESET_PAGE_KEYS.some((key) => key in patch && patch[key] !== urlState[key]) ||
+      ORDER_FILTER_PATCH_RESET_PAGE_KEYS.some((key) => {
+        if (!(key in patch)) return false;
+        return !valuesEqual(String(key), patch[key], urlState[key as keyof OrdersListUrlState]);
+      }) ||
       "sortBy" in patch ||
       "sortOrder" in patch;
 
@@ -328,7 +346,7 @@ export function OrdersListWidget({ forcedOrderStatuses, forcedTableGroup }: Orde
           city: effectiveState.city,
           paymentStatus: effectiveState.paymentStatus,
           actionStatusCode: effectiveState.actionStatusCode,
-          stateStatusCode: effectiveState.stateStatusCode,
+          stateStatusCodes: effectiveState.stateStatusCodes,
         }}
         onChange={applyFilterPatch}
         onReset={onReset}

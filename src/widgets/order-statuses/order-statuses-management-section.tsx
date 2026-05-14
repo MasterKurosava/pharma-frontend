@@ -15,7 +15,6 @@ import { Card } from "@/shared/ui/card";
 import { DataTable, type DataTableColumn } from "@/shared/ui/data-table/data-table";
 import { Input } from "@/shared/ui/input";
 import { ModalShell } from "@/shared/ui/modal-shell";
-// NativeSelect is intentionally not used here now: table groups are multi-select checkboxes.
 
 type Props = {
   type: OrderStatusType;
@@ -27,9 +26,6 @@ type StatusFormState = {
   name: string;
   color: string;
   tableGroups: OrderTableGroup[];
-  reserveOnSet: boolean;
-  writeOffOnSet: boolean;
-  setAssemblyDateOnSet: boolean;
   sortOrder: number;
   isActive: boolean;
 };
@@ -38,9 +34,6 @@ const emptyForm: StatusFormState = {
   name: "",
   color: "",
   tableGroups: [],
-  reserveOnSet: false,
-  writeOffOnSet: false,
-  setAssemblyDateOnSet: false,
   sortOrder: 0,
   isActive: true,
 };
@@ -68,9 +61,6 @@ export function OrderStatusesManagementSection({ type, title, emptyDescription }
       name: status.name,
       color: status.color ?? "",
       tableGroups: status.tableGroups ?? [],
-      reserveOnSet: status.reserveOnSet,
-      writeOffOnSet: status.writeOffOnSet,
-      setAssemblyDateOnSet: status.setAssemblyDateOnSet,
       sortOrder: status.sortOrder,
       isActive: status.isActive,
     });
@@ -82,10 +72,7 @@ export function OrderStatusesManagementSection({ type, title, emptyDescription }
     const dto: UpdateOrderStatusConfigDto = {
       name: form.name.trim(),
       color: form.color.trim() || null,
-      tableGroups: form.tableGroups,
-      reserveOnSet: type === "ACTION" ? form.reserveOnSet : false,
-      writeOffOnSet: type === "ACTION" ? form.writeOffOnSet : false,
-      setAssemblyDateOnSet: type === "ACTION" ? form.setAssemblyDateOnSet : false,
+      tableGroups: type === "STATE" ? form.tableGroups : undefined,
       sortOrder: form.sortOrder,
       isActive: form.isActive,
     };
@@ -109,25 +96,13 @@ export function OrderStatusesManagementSection({ type, title, emptyDescription }
         </div>
       ),
     },
-    {
-      id: "tableGroups",
-      header: "Таблица(ы)",
-      cell: (row: OrderStatusConfigItem) =>
-        row.tableGroups?.length ? row.tableGroups.map((g) => ORDER_TABLE_GROUP_LABELS[g]).join(", ") : "—",
-    },
-    ...(type === "ACTION"
+    ...(type === "STATE"
       ? ([
           {
-            id: "flags",
-            header: "Флаги",
+            id: "tableGroups",
+            header: "Таблица(ы)",
             cell: (row: OrderStatusConfigItem) =>
-              [
-                row.reserveOnSet ? "Резерв" : "",
-                row.writeOffOnSet ? "Списание" : "",
-                row.setAssemblyDateOnSet ? "Дата сборки" : "",
-              ]
-                .filter(Boolean)
-                .join(", ") || "—",
+              row.tableGroups?.length ? row.tableGroups.map((g) => ORDER_TABLE_GROUP_LABELS[g]).join(", ") : "—",
           },
         ] satisfies Array<DataTableColumn<OrderStatusConfigItem>>)
       : []),
@@ -181,34 +156,36 @@ export function OrderStatusesManagementSection({ type, title, emptyDescription }
             <label className="text-sm font-medium">Цвет</label>
             <Input value={form.color} onChange={(e) => setForm((p) => ({ ...p, color: e.target.value }))} />
           </div>
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium">Таблицы</label>
-            <div className="grid gap-2 rounded-xl border bg-card p-3 sm:grid-cols-2">
-              {tableGroupOptions.map((opt) => {
-                const value = opt.value as OrderTableGroup;
-                const checked = form.tableGroups.includes(value);
-                return (
-                  <label key={String(opt.value)} className="inline-flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={(e) => {
-                        const nextChecked = e.target.checked;
-                        setForm((p) => {
-                          const current = p.tableGroups;
-                          if (nextChecked) {
-                            return current.includes(value) ? p : { ...p, tableGroups: [...current, value] };
-                          }
-                          return { ...p, tableGroups: current.filter((g) => g !== value) };
-                        });
-                      }}
-                    />
-                    {opt.label}
-                  </label>
-                );
-              })}
+          {type === "STATE" ? (
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Таблицы</label>
+              <div className="grid gap-2 rounded-xl border bg-card p-3 sm:grid-cols-2">
+                {tableGroupOptions.map((opt) => {
+                  const value = opt.value as OrderTableGroup;
+                  const checked = form.tableGroups.includes(value);
+                  return (
+                    <label key={String(opt.value)} className="inline-flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={(e) => {
+                          const nextChecked = e.target.checked;
+                          setForm((p) => {
+                            const current = p.tableGroups;
+                            if (nextChecked) {
+                              return current.includes(value) ? p : { ...p, tableGroups: [...current, value] };
+                            }
+                            return { ...p, tableGroups: current.filter((g) => g !== value) };
+                          });
+                        }}
+                      />
+                      {opt.label}
+                    </label>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          ) : null}
           <div className="space-y-1.5">
             <label className="text-sm font-medium">Порядок</label>
             <Input
@@ -227,37 +204,6 @@ export function OrderStatusesManagementSection({ type, title, emptyDescription }
             />
             Активен
           </label>
-          <div className="flex flex-col gap-2">
-            <label className="inline-flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={form.reserveOnSet}
-                disabled={type !== "ACTION"}
-                onChange={(e) => setForm((p) => ({ ...p, reserveOnSet: e.target.checked }))}
-              />
-              Добавлять в резерв
-            </label>
-            <label className="inline-flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={form.writeOffOnSet}
-                disabled={type !== "ACTION"}
-                onChange={(e) => setForm((p) => ({ ...p, writeOffOnSet: e.target.checked }))}
-              />
-              Списывать при установке
-            </label>
-            <label className="inline-flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={form.setAssemblyDateOnSet}
-                disabled={type !== "ACTION"}
-                onChange={(e) =>
-                  setForm((p) => ({ ...p, setAssemblyDateOnSet: e.target.checked }))
-                }
-              />
-              Ставить дату сборки
-            </label>
-          </div>
 
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" onClick={() => setIsModalOpen(false)}>

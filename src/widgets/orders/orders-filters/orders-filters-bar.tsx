@@ -1,8 +1,12 @@
-import type { OrdersListUrlState, OrdersFiltersState } from "@/features/orders/model/orders-url";
+import {
+  canonicalStateStatusCodesKey,
+  type OrdersFiltersState,
+  type OrdersListUrlState,
+} from "@/features/orders/model/orders-url";
 import type { OrderFilterKey } from "@/entities/user/model/types";
 import type { ActionStatusCode, OrderTableGroup, PaymentStatusCode, StateStatusCode } from "@/shared/config/order-static";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
 
 import { useDebouncedValue } from "@/shared/lib/use-debounced-value";
@@ -14,7 +18,7 @@ import { Input } from "@/shared/ui/input";
 type OrdersFiltersBarProps = {
   state: Pick<
     OrdersListUrlState,
-    "search" | "tableGroup" | "city" | "paymentStatus" | "actionStatusCode" | "stateStatusCode"
+    "search" | "tableGroup" | "city" | "paymentStatus" | "actionStatusCode" | "stateStatusCodes"
   >;
   onChange: (patch: Partial<OrdersFiltersState>) => void;
   onReset: () => void;
@@ -45,36 +49,37 @@ export function OrdersFiltersBar({
   const [tableGroupDraft, setTableGroupDraft] = useState(state.tableGroup ?? "");
   const [cityDraft, setCityDraft] = useState(state.city ?? "");
   const [paymentStatusDraft, setPaymentStatusDraft] = useState(state.paymentStatus ?? "");
-  const [stateStatusDraft, setStateStatusDraft] = useState(state.stateStatusCode ?? "");
+  const [stateStatusCodesDraft, setStateStatusCodesDraft] = useState<StateStatusCode[]>(state.stateStatusCodes ?? []);
   const [actionStatusDraft, setActionStatusDraft] = useState(state.actionStatusCode ?? "");
-  const debouncedDrafts = useDebouncedValue(
-    {
+
+  const debouncedInput = useMemo(
+    () => ({
       search: searchDraft,
       tableGroup: tableGroupDraft,
       city: cityDraft,
       paymentStatus: paymentStatusDraft,
-      stateStatusCode: stateStatusDraft,
+      stateStatusCodes: stateStatusCodesDraft,
       actionStatusCode: actionStatusDraft,
-    },
-    350,
+    }),
+    [searchDraft, tableGroupDraft, cityDraft, paymentStatusDraft, stateStatusCodesDraft, actionStatusDraft],
   );
+
+  const debouncedDrafts = useDebouncedValue(debouncedInput, 350);
   const isVisible = (key: OrderFilterKey) => visibleFilters.includes(key);
+  const showStateStatusFilter = isVisible("stateStatuses") || isVisible("orderStatuses");
 
   useEffect(() => {
     setSearchDraft(state.search ?? "");
     setTableGroupDraft(state.tableGroup ?? "");
     setCityDraft(state.city ?? "");
     setPaymentStatusDraft(state.paymentStatus ?? "");
-    setStateStatusDraft(state.stateStatusCode ?? "");
     setActionStatusDraft(state.actionStatusCode ?? "");
-  }, [
-    state.actionStatusCode,
-    state.city,
-    state.paymentStatus,
-    state.search,
-    state.stateStatusCode,
-    state.tableGroup,
-  ]);
+  }, [state.actionStatusCode, state.city, state.paymentStatus, state.search, state.tableGroup]);
+
+  const stateCodesUrlKey = canonicalStateStatusCodesKey(state.stateStatusCodes);
+  useEffect(() => {
+    setStateStatusCodesDraft(state.stateStatusCodes ?? []);
+  }, [stateCodesUrlKey]);
 
   useEffect(() => {
     onChange({
@@ -82,10 +87,19 @@ export function OrdersFiltersBar({
       tableGroup: (debouncedDrafts.tableGroup || undefined) as OrderTableGroup | undefined,
       city: debouncedDrafts.city.trim() || undefined,
       paymentStatus: (debouncedDrafts.paymentStatus || undefined) as PaymentStatusCode | undefined,
-      stateStatusCode: (debouncedDrafts.stateStatusCode || undefined) as StateStatusCode | undefined,
+      stateStatusCodes: debouncedDrafts.stateStatusCodes.length ? debouncedDrafts.stateStatusCodes : undefined,
       actionStatusCode: (debouncedDrafts.actionStatusCode || undefined) as ActionStatusCode | undefined,
     });
   }, [debouncedDrafts, onChange]);
+
+  const toggleStateStatus = (code: StateStatusCode, checked: boolean) => {
+    setStateStatusCodesDraft((prev) => {
+      if (checked) {
+        return prev.includes(code) ? prev : [...prev, code];
+      }
+      return prev.filter((c) => c !== code);
+    });
+  };
 
   return (
     <Card className="border-border/70 shadow-sm">
@@ -97,7 +111,7 @@ export function OrdersFiltersBar({
               <Input
                 value={searchDraft}
                 onChange={(e) => setSearchDraft(e.target.value)}
-                placeholder="Поиск по заказу, городу, адресу..."
+                placeholder="Номер заказа, телефон, город, адрес..."
                 className="pl-9"
               />
             </div>
@@ -146,16 +160,28 @@ export function OrdersFiltersBar({
             </div>
           ) : null}
 
-          {isVisible("orderStatuses") ? (
-            <div className="w-full sm:w-[190px]">
+          {showStateStatusFilter ? (
+            <div className="w-full min-w-[200px] max-w-[min(100%,420px)]">
               <div className="space-y-1">
                 <p className="px-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Статус состояния</p>
-                <NativeSelect
-                  value={stateStatusDraft}
-                  options={[{ value: "", label: "Любой статус состояния" }, ...stateStatusOptions]}
-                  onValueChange={(next) => setStateStatusDraft(String(next || ""))}
-                  placeholder=""
-                />
+                <div className="max-h-40 overflow-y-auto rounded-md border bg-card px-2 py-2">
+                  <div className="grid gap-1.5 sm:grid-cols-2">
+                    {stateStatusOptions.map((opt) => {
+                      const code = opt.value as StateStatusCode;
+                      const checked = stateStatusCodesDraft.includes(code);
+                      return (
+                        <label key={opt.value} className="inline-flex items-center gap-2 text-sm leading-tight">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(e) => toggleStateStatus(code, e.target.checked)}
+                          />
+                          <span>{opt.label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             </div>
           ) : null}
@@ -185,4 +211,3 @@ export function OrdersFiltersBar({
     </Card>
   );
 }
-

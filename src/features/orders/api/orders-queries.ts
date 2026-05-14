@@ -16,7 +16,7 @@ function toSerializableParams(params: OrdersListParams): SerializableQueryParams
     actionStatusCode: params.actionStatusCode,
     actionStatusCodes: params.actionStatusCodes?.join(","),
     storagePlaceId: params.storagePlaceId,
-    stateStatusCode: params.stateStatusCode,
+    stateStatuses: params.stateStatusCodes?.length ? params.stateStatusCodes.join(",") : undefined,
     dateFrom: params.dateFrom,
     dateTo: params.dateTo,
     page: params.page,

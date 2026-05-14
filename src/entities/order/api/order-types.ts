@@ -10,7 +10,7 @@ export type OrderListParams = {
   actionStatusCode?: ActionStatusCode;
   actionStatusCodes?: ActionStatusCode[];
   storagePlaceId?: number;
-  stateStatusCode?: StateStatusCode;
+  stateStatusCodes?: StateStatusCode[];
   dateFrom?: string;
   dateTo?: string;
 };

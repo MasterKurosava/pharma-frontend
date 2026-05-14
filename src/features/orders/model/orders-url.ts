@@ -19,7 +19,8 @@ export type OrdersFiltersState = {
   city?: string;
   paymentStatus?: PaymentStatusCode;
   actionStatusCode?: ActionStatusCode;
-  stateStatusCode?: StateStatusCode;
+  /** Если задано, в списке только заказы с этими кодами статуса состояния */
+  stateStatusCodes?: StateStatusCode[];
   storagePlaceId?: number;
   dateFrom?: string;
   dateTo?: string;
@@ -44,6 +45,21 @@ function parseDate(value: string | null): string | undefined {
   if (!value) return undefined;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return undefined;
   return value;
+}
+
+export function canonicalStateStatusCodesKey(codes: StateStatusCode[] | undefined): string {
+  if (!codes?.length) return "";
+  return [...codes].sort().join("\u0000");
+}
+
+function parseStateStatusCodes(searchParams: URLSearchParams): StateStatusCode[] | undefined {
+  const joined = searchParams.get("stateStatuses")?.trim();
+  if (joined) {
+    const codes = joined.split(",").map((s) => s.trim()).filter(Boolean) as StateStatusCode[];
+    return codes.length ? codes : undefined;
+  }
+  const legacy = searchParams.get("stateStatusCode")?.trim();
+  return legacy ? ([legacy] as StateStatusCode[]) : undefined;
 }
 
 export function parseOrdersSearchParams(searchParams: URLSearchParams): OrdersListUrlState {
@@ -79,7 +95,7 @@ export function parseOrdersSearchParams(searchParams: URLSearchParams): OrdersLi
     city: searchParams.get("city")?.trim() ? searchParams.get("city")!.trim() : undefined,
     paymentStatus: (searchParams.get("paymentStatus") as PaymentStatusCode | null) ?? undefined,
     actionStatusCode: (searchParams.get("actionStatusCode") as ActionStatusCode | null) ?? undefined,
-    stateStatusCode: (searchParams.get("stateStatusCode") as StateStatusCode | null) ?? undefined,
+    stateStatusCodes: parseStateStatusCodes(searchParams),
     storagePlaceId: parseIntOrUndefined(searchParams.get("storagePlaceId")),
     dateFrom: parseDate(searchParams.get("dateFrom")),
     dateTo: parseDate(searchParams.get("dateTo")),
@@ -106,7 +122,7 @@ export function serializeOrdersSearchParams(state: OrdersListUrlState): URLSearc
   if (state.city) sp.set("city", state.city);
   if (state.paymentStatus) sp.set("paymentStatus", state.paymentStatus);
   if (state.actionStatusCode) sp.set("actionStatusCode", state.actionStatusCode);
-  if (state.stateStatusCode) sp.set("stateStatusCode", state.stateStatusCode);
+  if (state.stateStatusCodes?.length) sp.set("stateStatuses", state.stateStatusCodes.join(","));
   if (state.storagePlaceId) sp.set("storagePlaceId", String(state.storagePlaceId));
   if (state.dateFrom) sp.set("dateFrom", state.dateFrom);
   if (state.dateTo) sp.set("dateTo", state.dateTo);

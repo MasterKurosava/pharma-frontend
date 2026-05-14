@@ -11,9 +11,11 @@ import type {
 import type { ActionStatusCode, PaymentStatusCode, StateStatusCode } from "@/shared/config/order-static";
 
 export async function getOrders(params: OrdersListParams): Promise<OrdersListResponse> {
+  const { actionStatusCodes, stateStatusCodes, ...rest } = params;
   const normalizedParams = {
-    ...params,
-    actionStatusCodes: params.actionStatusCodes?.length ? params.actionStatusCodes.join(",") : undefined,
+    ...rest,
+    actionStatusCodes: actionStatusCodes?.length ? actionStatusCodes.join(",") : undefined,
+    stateStatuses: stateStatusCodes?.length ? stateStatusCodes.join(",") : undefined,
   };
   const { data } = await apiClient.get<OrdersListResponse>("/orders", { params: normalizedParams });
   return data;

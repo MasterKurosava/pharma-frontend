@@ -8,11 +8,12 @@ export const ORDER_DEFAULT_VISIBLE_FILTERS: OrderFilterKey[] = [
   "city",
   "paymentStatus",
   "orderStatus",
-  "orderStatuses",
+  "stateStatuses",
 ];
 
 export const ORDER_ADDITIONAL_ACTIVE_COUNT_KEYS: Array<keyof OrdersFiltersState> = [
   "tableGroup",
+  "stateStatusCodes",
 ];
 
 export const ORDER_FILTER_PATCH_RESET_PAGE_KEYS: Array<keyof OrdersFiltersState> = [
@@ -21,7 +22,7 @@ export const ORDER_FILTER_PATCH_RESET_PAGE_KEYS: Array<keyof OrdersFiltersState>
   "city",
   "paymentStatus",
   "actionStatusCode",
-  "stateStatusCode",
+  "stateStatusCodes",
 ];
 
 export const ORDER_EMPTY_FILTERS_STATE: OrdersFiltersState = {
@@ -30,7 +31,7 @@ export const ORDER_EMPTY_FILTERS_STATE: OrdersFiltersState = {
   city: undefined,
   paymentStatus: undefined,
   actionStatusCode: undefined,
-  stateStatusCode: undefined,
+  stateStatusCodes: undefined,
 };
 
 export function applyFixedOrderFilters(

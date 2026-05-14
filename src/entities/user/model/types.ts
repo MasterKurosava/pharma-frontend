@@ -8,6 +8,8 @@ export type OrderFilterKey =
   | "paymentStatus"
   | "orderStatus"
   | "orderStatuses"
+  | "stateStatuses"
+  | "actionStatusCode"
   | "storagePlaceId"
   | "dateFrom"
   | "dateTo";

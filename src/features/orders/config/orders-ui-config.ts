@@ -10,7 +10,7 @@ export const ORDER_TEXTS = {
   emptyTitle: "Заказы не найдены",
   emptyDescription: "Попробуйте изменить фильтры или строку поиска.",
   createButton: "Создать заказ",
-  searchPlaceholder: "Поиск по заказу, городу, адресу...",
+  searchPlaceholder: "Номер заказа, телефон, город, адрес...",
 } as const;
 
 export const ORDER_TABLE_TABS: Array<{ value: OrderTableGroup | "ALL"; label: string }> = ORDER_TABLE_GROUP_TABS;
@@ -21,5 +21,5 @@ export const ORDER_FILTERS_CONFIG = [
   { key: "city", label: "Город" },
   { key: "paymentStatus", label: "Статус оплаты" },
   { key: "orderStatus", label: "Статус действия" },
-  { key: "orderStatuses", label: "Статус состояния" },
+  { key: "stateStatuses", label: "Статус состояния" },
 ] as const;
