@@ -21,6 +21,8 @@ export type OrdersFiltersState = {
   actionStatusCode?: ActionStatusCode;
   /** Если задано, в списке только заказы с этими кодами статуса состояния */
   stateStatusCodes?: StateStatusCode[];
+  /** Коды статусов сборки (мультивыбор) */
+  assemblyStatusCodes?: string[];
   storagePlaceId?: number;
   dateFrom?: string;
   dateTo?: string;
@@ -47,9 +49,20 @@ function parseDate(value: string | null): string | undefined {
   return value;
 }
 
-export function canonicalStateStatusCodesKey(codes: StateStatusCode[] | undefined): string {
+export function canonicalMultiCodesKey(codes: readonly string[] | undefined): string {
   if (!codes?.length) return "";
-  return [...codes].sort().join("\u0000");
+  return [...codes].map(String).sort().join("\u0000");
+}
+
+export function canonicalStateStatusCodesKey(codes: StateStatusCode[] | undefined): string {
+  return canonicalMultiCodesKey(codes);
+}
+
+function parseAssemblyStatusCodes(searchParams: URLSearchParams): string[] | undefined {
+  const joined = searchParams.get("assemblyStatuses")?.trim();
+  if (!joined) return undefined;
+  const codes = joined.split(",").map((s) => s.trim()).filter(Boolean);
+  return codes.length ? codes : undefined;
 }
 
 function parseStateStatusCodes(searchParams: URLSearchParams): StateStatusCode[] | undefined {
@@ -96,6 +109,7 @@ export function parseOrdersSearchParams(searchParams: URLSearchParams): OrdersLi
     paymentStatus: (searchParams.get("paymentStatus") as PaymentStatusCode | null) ?? undefined,
     actionStatusCode: (searchParams.get("actionStatusCode") as ActionStatusCode | null) ?? undefined,
     stateStatusCodes: parseStateStatusCodes(searchParams),
+    assemblyStatusCodes: parseAssemblyStatusCodes(searchParams),
     storagePlaceId: parseIntOrUndefined(searchParams.get("storagePlaceId")),
     dateFrom: parseDate(searchParams.get("dateFrom")),
     dateTo: parseDate(searchParams.get("dateTo")),
@@ -123,6 +137,7 @@ export function serializeOrdersSearchParams(state: OrdersListUrlState): URLSearc
   if (state.paymentStatus) sp.set("paymentStatus", state.paymentStatus);
   if (state.actionStatusCode) sp.set("actionStatusCode", state.actionStatusCode);
   if (state.stateStatusCodes?.length) sp.set("stateStatuses", state.stateStatusCodes.join(","));
+  if (state.assemblyStatusCodes?.length) sp.set("assemblyStatuses", state.assemblyStatusCodes.join(","));
   if (state.storagePlaceId) sp.set("storagePlaceId", String(state.storagePlaceId));
   if (state.dateFrom) sp.set("dateFrom", state.dateFrom);
   if (state.dateTo) sp.set("dateTo", state.dateTo);

@@ -1,5 +1,6 @@
 import {
   canonicalStateStatusCodesKey,
+  canonicalMultiCodesKey,
   type OrdersFiltersState,
   type OrdersListUrlState,
 } from "@/features/orders/model/orders-url";
@@ -19,7 +20,13 @@ import { Input } from "@/shared/ui/input";
 type OrdersFiltersBarProps = {
   state: Pick<
     OrdersListUrlState,
-    "search" | "tableGroup" | "city" | "paymentStatus" | "actionStatusCode" | "stateStatusCodes"
+    | "search"
+    | "tableGroup"
+    | "city"
+    | "paymentStatus"
+    | "actionStatusCode"
+    | "stateStatusCodes"
+    | "assemblyStatusCodes"
   >;
   onChange: (patch: Partial<OrdersFiltersState>) => void;
   onReset: () => void;
@@ -33,16 +40,20 @@ type OrdersFiltersBarProps = {
   paymentStatusOptions: Array<{ value: string; label: string }>;
   actionStatusOptions: Array<{ value: string; label: string }>;
   stateStatusOptions: Array<{ value: string; label: string }>;
+  assemblyStatusOptions: Array<{ value: string; label: string }>;
 };
 
-function StateStatusMultiDropdown({
+/** Выпадающий мультивыбор: одна колонка, строки в стиле списка NativeSelect */
+function CheckboxMultiDropdown({
   options,
   value,
   onValueChange,
+  emptySummaryLabel,
 }: {
   options: Array<{ value: string; label: string }>;
-  value: StateStatusCode[];
-  onValueChange: (next: StateStatusCode[]) => void;
+  value: string[];
+  onValueChange: (next: string[]) => void;
+  emptySummaryLabel: string;
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -61,14 +72,14 @@ function StateStatusMultiDropdown({
   const labelByCode = useMemo(() => new Map(options.map((o) => [o.value, o.label])), [options]);
 
   const summary = useMemo(() => {
-    if (!value.length) return "Любой статус состояния";
+    if (!value.length) return emptySummaryLabel;
     if (value.length === 1) return labelByCode.get(value[0]) ?? value[0];
     const joined = value.map((c) => labelByCode.get(c) ?? c).join(", ");
-    if (joined.length <= 44) return joined;
+    if (joined.length <= 40) return joined;
     return `Выбрано: ${value.length}`;
-  }, [value, labelByCode]);
+  }, [value, labelByCode, emptySummaryLabel]);
 
-  const toggle = (code: StateStatusCode, checked: boolean) => {
+  const toggle = (code: string, checked: boolean) => {
     if (checked) {
       onValueChange(value.includes(code) ? value : [...value, code]);
     } else {
@@ -97,37 +108,34 @@ function StateStatusMultiDropdown({
 
       {open ? (
         <div
-          className="absolute left-0 top-full z-50 mt-1 w-[min(100vw-1.5rem,380px)] rounded-md border bg-card p-2 shadow-lg sm:w-[min(100%,380px)]"
+          className="absolute left-0 top-full z-50 mt-1 min-w-full max-w-[min(100vw-1rem,400px)] rounded-md border bg-card p-1.5 shadow-lg"
           role="listbox"
           aria-multiselectable
         >
-          <div className="max-h-64 overflow-y-auto">
-            <div className="grid gap-1.5 sm:grid-cols-2">
-              {options.map((opt) => {
-                const code = opt.value as StateStatusCode;
-                const checked = value.includes(code);
-                return (
-                  <label
-                    key={opt.value}
-                    className="flex cursor-pointer items-start gap-2 rounded-md px-1.5 py-1 text-sm leading-tight hover:bg-accent/50"
-                  >
-                    <input
-                      type="checkbox"
-                      className="mt-0.5 shrink-0 rounded border-input accent-primary"
-                      checked={checked}
-                      onChange={(e) => toggle(code, e.target.checked)}
-                    />
-                    <span>{opt.label}</span>
-                  </label>
-                );
-              })}
-            </div>
+          <div className="max-h-64 overflow-y-auto overflow-x-hidden py-0.5">
+            {options.map((opt) => {
+              const checked = value.includes(opt.value);
+              return (
+                <label
+                  key={opt.value}
+                  className="flex w-full cursor-pointer items-center gap-2.5 rounded-md px-2 py-2 text-left text-sm hover:bg-accent"
+                >
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 shrink-0 rounded border-input accent-primary"
+                    checked={checked}
+                    onChange={(e) => toggle(opt.value, e.target.checked)}
+                  />
+                  <span className="min-w-0 flex-1 break-words leading-snug">{opt.label}</span>
+                </label>
+              );
+            })}
           </div>
           {value.length > 0 ? (
-            <div className="mt-2 border-t pt-2">
+            <div className="mt-1 border-t border-border/80 pt-1">
               <button
                 type="button"
-                className="w-full rounded-md py-1.5 text-center text-xs text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                className="flex w-full items-center justify-center rounded-md px-2 py-2 text-xs text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                 onClick={() => {
                   onValueChange([]);
                 }}
@@ -152,12 +160,14 @@ export function OrdersFiltersBar({
   paymentStatusOptions,
   actionStatusOptions,
   stateStatusOptions,
+  assemblyStatusOptions,
 }: OrdersFiltersBarProps) {
   const [searchDraft, setSearchDraft] = useState(state.search ?? "");
   const [tableGroupDraft, setTableGroupDraft] = useState(state.tableGroup ?? "");
   const [cityDraft, setCityDraft] = useState(state.city ?? "");
   const [paymentStatusDraft, setPaymentStatusDraft] = useState(state.paymentStatus ?? "");
   const [stateStatusCodesDraft, setStateStatusCodesDraft] = useState<StateStatusCode[]>(state.stateStatusCodes ?? []);
+  const [assemblyStatusCodesDraft, setAssemblyStatusCodesDraft] = useState<string[]>(state.assemblyStatusCodes ?? []);
   const [actionStatusDraft, setActionStatusDraft] = useState(state.actionStatusCode ?? "");
 
   const debouncedInput = useMemo(
@@ -167,9 +177,10 @@ export function OrdersFiltersBar({
       city: cityDraft,
       paymentStatus: paymentStatusDraft,
       stateStatusCodes: stateStatusCodesDraft,
+      assemblyStatusCodes: assemblyStatusCodesDraft,
       actionStatusCode: actionStatusDraft,
     }),
-    [searchDraft, tableGroupDraft, cityDraft, paymentStatusDraft, stateStatusCodesDraft, actionStatusDraft],
+    [searchDraft, tableGroupDraft, cityDraft, paymentStatusDraft, stateStatusCodesDraft, assemblyStatusCodesDraft, actionStatusDraft],
   );
 
   const debouncedDrafts = useDebouncedValue(debouncedInput, 350);
@@ -189,6 +200,11 @@ export function OrdersFiltersBar({
     setStateStatusCodesDraft(state.stateStatusCodes ?? []);
   }, [stateCodesUrlKey]);
 
+  const assemblyCodesUrlKey = canonicalMultiCodesKey(state.assemblyStatusCodes);
+  useEffect(() => {
+    setAssemblyStatusCodesDraft(state.assemblyStatusCodes ?? []);
+  }, [assemblyCodesUrlKey]);
+
   useEffect(() => {
     onChange({
       search: debouncedDrafts.search.trim() || undefined,
@@ -196,6 +212,7 @@ export function OrdersFiltersBar({
       city: debouncedDrafts.city.trim() || undefined,
       paymentStatus: (debouncedDrafts.paymentStatus || undefined) as PaymentStatusCode | undefined,
       stateStatusCodes: debouncedDrafts.stateStatusCodes.length ? debouncedDrafts.stateStatusCodes : undefined,
+      assemblyStatusCodes: debouncedDrafts.assemblyStatusCodes.length ? debouncedDrafts.assemblyStatusCodes : undefined,
       actionStatusCode: (debouncedDrafts.actionStatusCode || undefined) as ActionStatusCode | undefined,
     });
   }, [debouncedDrafts, onChange]);
@@ -260,13 +277,28 @@ export function OrdersFiltersBar({
           ) : null}
 
           {showStateStatusFilter ? (
-            <div className="w-full sm:w-[190px]">
+            <div className="w-full min-w-0 sm:min-w-[220px] sm:max-w-[260px]">
               <div className="space-y-1">
                 <p className="px-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Статус состояния</p>
-                <StateStatusMultiDropdown
+                <CheckboxMultiDropdown
                   options={stateStatusOptions}
                   value={stateStatusCodesDraft}
-                  onValueChange={setStateStatusCodesDraft}
+                  onValueChange={(next) => setStateStatusCodesDraft(next as StateStatusCode[])}
+                  emptySummaryLabel="Любой статус состояния"
+                />
+              </div>
+            </div>
+          ) : null}
+
+          {isVisible("assemblyStatuses") ? (
+            <div className="w-full min-w-0 sm:min-w-[220px] sm:max-w-[260px]">
+              <div className="space-y-1">
+                <p className="px-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Статус сборки</p>
+                <CheckboxMultiDropdown
+                  options={assemblyStatusOptions}
+                  value={assemblyStatusCodesDraft}
+                  onValueChange={setAssemblyStatusCodesDraft}
+                  emptySummaryLabel="Любой статус сборки"
                 />
               </div>
             </div>

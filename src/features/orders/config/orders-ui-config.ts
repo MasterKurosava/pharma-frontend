@@ -22,4 +22,5 @@ export const ORDER_FILTERS_CONFIG = [
   { key: "paymentStatus", label: "Статус оплаты" },
   { key: "orderStatus", label: "Статус действия" },
   { key: "stateStatuses", label: "Статус состояния" },
+  { key: "assemblyStatuses", label: "Статус сборки" },
 ] as const;

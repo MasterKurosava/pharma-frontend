@@ -4,6 +4,7 @@ import { Check, Plus } from "lucide-react";
 import * as AlertDialog from "@radix-ui/react-alert-dialog";
 
 import {
+  canonicalMultiCodesKey,
   canonicalStateStatusCodesKey,
   ordersUrlDefaults,
   parseOrdersSearchParams,
@@ -77,6 +78,7 @@ export function OrdersListWidget({ forcedOrderStatuses, forcedTableGroup }: Orde
       actionStatusCode: effectiveState.actionStatusCode,
       actionStatusCodes: forcedOrderStatuses,
       stateStatusCodes: effectiveState.stateStatusCodes,
+      assemblyStatusCodes: effectiveState.assemblyStatusCodes,
       page: effectiveState.page,
       pageSize: effectiveState.pageSize,
       sortBy: effectiveState.sortBy,
@@ -141,6 +143,10 @@ export function OrdersListWidget({ forcedOrderStatuses, forcedTableGroup }: Orde
       if (key === "stateStatusCodes") {
         return canonicalStateStatusCodesKey(patchValue as StateStatusCode[] | undefined)
           === canonicalStateStatusCodesKey(currentValue as StateStatusCode[] | undefined);
+      }
+      if (key === "assemblyStatusCodes") {
+        return canonicalMultiCodesKey(patchValue as string[] | undefined)
+          === canonicalMultiCodesKey(currentValue as string[] | undefined);
       }
       return patchValue === currentValue;
     };
@@ -347,6 +353,7 @@ export function OrdersListWidget({ forcedOrderStatuses, forcedTableGroup }: Orde
           paymentStatus: effectiveState.paymentStatus,
           actionStatusCode: effectiveState.actionStatusCode,
           stateStatusCodes: effectiveState.stateStatusCodes,
+          assemblyStatusCodes: effectiveState.assemblyStatusCodes,
         }}
         onChange={applyFilterPatch}
         onReset={onReset}
@@ -356,6 +363,7 @@ export function OrdersListWidget({ forcedOrderStatuses, forcedTableGroup }: Orde
         paymentStatusOptions={options.paymentStatuses}
         actionStatusOptions={options.actionStatuses}
         stateStatusOptions={options.stateStatuses}
+        assemblyStatusOptions={options.assemblyStatuses}
       />
       {selectedCount > 0 ? (
         <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-card p-3 shadow-sm">

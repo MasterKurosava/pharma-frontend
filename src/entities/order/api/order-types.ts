@@ -11,6 +11,7 @@ export type OrderListParams = {
   actionStatusCodes?: ActionStatusCode[];
   storagePlaceId?: number;
   stateStatusCodes?: StateStatusCode[];
+  assemblyStatusCodes?: string[];
   dateFrom?: string;
   dateTo?: string;
 };
