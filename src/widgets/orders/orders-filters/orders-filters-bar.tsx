@@ -6,10 +6,11 @@ import {
 import type { OrderFilterKey } from "@/entities/user/model/types";
 import type { ActionStatusCode, OrderTableGroup, PaymentStatusCode, StateStatusCode } from "@/shared/config/order-static";
 
-import { useEffect, useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ChevronDown, Search } from "lucide-react";
 
 import { useDebouncedValue } from "@/shared/lib/use-debounced-value";
+import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { Card } from "@/shared/ui/card";
 import { NativeSelect } from "@/shared/ui/native-select/native-select";
@@ -33,6 +34,113 @@ type OrdersFiltersBarProps = {
   actionStatusOptions: Array<{ value: string; label: string }>;
   stateStatusOptions: Array<{ value: string; label: string }>;
 };
+
+function StateStatusMultiDropdown({
+  options,
+  value,
+  onValueChange,
+}: {
+  options: Array<{ value: string; label: string }>;
+  value: StateStatusCode[];
+  onValueChange: (next: StateStatusCode[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: MouseEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    return () => document.removeEventListener("mousedown", onPointerDown);
+  }, [open]);
+
+  const labelByCode = useMemo(() => new Map(options.map((o) => [o.value, o.label])), [options]);
+
+  const summary = useMemo(() => {
+    if (!value.length) return "Любой статус состояния";
+    if (value.length === 1) return labelByCode.get(value[0]) ?? value[0];
+    const joined = value.map((c) => labelByCode.get(c) ?? c).join(", ");
+    if (joined.length <= 44) return joined;
+    return `Выбрано: ${value.length}`;
+  }, [value, labelByCode]);
+
+  const toggle = (code: StateStatusCode, checked: boolean) => {
+    if (checked) {
+      onValueChange(value.includes(code) ? value : [...value, code]);
+    } else {
+      onValueChange(value.filter((c) => c !== code));
+    }
+  };
+
+  return (
+    <div ref={rootRef} className="relative w-full">
+      <button
+        type="button"
+        className={cn(
+          "flex h-10 w-full items-center justify-between rounded-md border border-input bg-card px-3 py-2 text-left text-sm ring-offset-background transition-colors",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          "hover:bg-accent/40",
+        )}
+        onClick={() => setOpen((prev) => !prev)}
+        aria-expanded={open}
+        aria-haspopup="listbox"
+      >
+        <span className={cn("min-w-0 flex-1 truncate", value.length === 0 ? "text-muted-foreground" : null)}>
+          {summary}
+        </span>
+        <ChevronDown className={cn("ml-2 h-4 w-4 shrink-0 text-muted-foreground transition-transform", open ? "rotate-180" : null)} />
+      </button>
+
+      {open ? (
+        <div
+          className="absolute left-0 top-full z-50 mt-1 w-[min(100vw-1.5rem,380px)] rounded-md border bg-card p-2 shadow-lg sm:w-[min(100%,380px)]"
+          role="listbox"
+          aria-multiselectable
+        >
+          <div className="max-h-64 overflow-y-auto">
+            <div className="grid gap-1.5 sm:grid-cols-2">
+              {options.map((opt) => {
+                const code = opt.value as StateStatusCode;
+                const checked = value.includes(code);
+                return (
+                  <label
+                    key={opt.value}
+                    className="flex cursor-pointer items-start gap-2 rounded-md px-1.5 py-1 text-sm leading-tight hover:bg-accent/50"
+                  >
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 shrink-0 rounded border-input accent-primary"
+                      checked={checked}
+                      onChange={(e) => toggle(code, e.target.checked)}
+                    />
+                    <span>{opt.label}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+          {value.length > 0 ? (
+            <div className="mt-2 border-t pt-2">
+              <button
+                type="button"
+                className="w-full rounded-md py-1.5 text-center text-xs text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                onClick={() => {
+                  onValueChange([]);
+                }}
+              >
+                Сбросить выбор
+              </button>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 export function OrdersFiltersBar({
   state,
@@ -91,15 +199,6 @@ export function OrdersFiltersBar({
       actionStatusCode: (debouncedDrafts.actionStatusCode || undefined) as ActionStatusCode | undefined,
     });
   }, [debouncedDrafts, onChange]);
-
-  const toggleStateStatus = (code: StateStatusCode, checked: boolean) => {
-    setStateStatusCodesDraft((prev) => {
-      if (checked) {
-        return prev.includes(code) ? prev : [...prev, code];
-      }
-      return prev.filter((c) => c !== code);
-    });
-  };
 
   return (
     <Card className="border-border/70 shadow-sm">
@@ -161,27 +260,14 @@ export function OrdersFiltersBar({
           ) : null}
 
           {showStateStatusFilter ? (
-            <div className="w-full min-w-[200px] max-w-[min(100%,420px)]">
+            <div className="w-full sm:w-[190px]">
               <div className="space-y-1">
                 <p className="px-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Статус состояния</p>
-                <div className="max-h-40 overflow-y-auto rounded-md border bg-card px-2 py-2">
-                  <div className="grid gap-1.5 sm:grid-cols-2">
-                    {stateStatusOptions.map((opt) => {
-                      const code = opt.value as StateStatusCode;
-                      const checked = stateStatusCodesDraft.includes(code);
-                      return (
-                        <label key={opt.value} className="inline-flex items-center gap-2 text-sm leading-tight">
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={(e) => toggleStateStatus(code, e.target.checked)}
-                          />
-                          <span>{opt.label}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                </div>
+                <StateStatusMultiDropdown
+                  options={stateStatusOptions}
+                  value={stateStatusCodesDraft}
+                  onValueChange={setStateStatusCodesDraft}
+                />
               </div>
             </div>
           ) : null}
