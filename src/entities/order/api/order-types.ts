@@ -7,7 +7,6 @@ export type OrderListParams = {
   city?: string;
   tableGroup?: OrderTableGroup;
   paymentStatus?: PaymentStatusCode;
-  actionStatusCode?: ActionStatusCode;
   actionStatusCodes?: ActionStatusCode[];
   storagePlaceId?: number;
   stateStatusCodes?: StateStatusCode[];

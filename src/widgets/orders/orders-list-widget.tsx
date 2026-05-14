@@ -41,7 +41,6 @@ import { NativeSelect } from "@/shared/ui/native-select/native-select";
 import { ORDER_TEXTS } from "@/features/orders/config/orders-ui-config";
 
 type OrdersListWidgetProps = {
-  forcedOrderStatuses?: ActionStatusCode[];
   forcedTableGroup?: OrderTableGroup;
 };
 
@@ -49,7 +48,7 @@ type BulkStatusField = "actionStatusCode" | "stateStatusCode" | "paymentStatus";
 type InlineStatusField = "actionStatusCode" | "stateStatusCode" | "assemblyStatusCode";
 const EMPTY_ORDERS: Order[] = [];
 
-export function OrdersListWidget({ forcedOrderStatuses, forcedTableGroup }: OrdersListWidgetProps) {
+export function OrdersListWidget({ forcedTableGroup }: OrdersListWidgetProps) {
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedOrderIds, setSelectedOrderIds] = useState<number[]>([]);
@@ -69,14 +68,14 @@ export function OrdersListWidget({ forcedOrderStatuses, forcedTableGroup }: Orde
     [orderPolicy?.editableFields],
   );
   const effectiveState = useMemo(() => applyFixedOrderFilters(urlState, fixedFilters), [fixedFilters, urlState]);
+
   const ordersListParams = useMemo<OrdersListParams>(
     () => ({
       search: effectiveState.search,
       tableGroup: forcedTableGroup ?? effectiveState.tableGroup,
       city: effectiveState.city,
       paymentStatus: effectiveState.paymentStatus,
-      actionStatusCode: effectiveState.actionStatusCode,
-      actionStatusCodes: forcedOrderStatuses,
+      actionStatusCodes: effectiveState.actionStatusCodes?.length ? effectiveState.actionStatusCodes : undefined,
       stateStatusCodes: effectiveState.stateStatusCodes,
       assemblyStatusCodes: effectiveState.assemblyStatusCodes,
       page: effectiveState.page,
@@ -84,15 +83,14 @@ export function OrdersListWidget({ forcedOrderStatuses, forcedTableGroup }: Orde
       sortBy: effectiveState.sortBy,
       sortOrder: effectiveState.sortOrder,
     }),
-    [effectiveState, forcedOrderStatuses, forcedTableGroup],
+    [effectiveState, forcedTableGroup],
   );
 
   const effectiveVisibleFilters = useMemo(() => {
-    const base = forcedOrderStatuses?.length
-      ? visibleFilters.filter((key) => key !== "orderStatus")
-      : visibleFilters;
+    const base =
+      fixedFilters.orderStatus !== undefined ? visibleFilters.filter((key) => key !== "orderStatus") : visibleFilters;
     return forcedTableGroup ? base.filter((key) => key !== "tableGroup") : base;
-  }, [forcedOrderStatuses, forcedTableGroup, visibleFilters]);
+  }, [fixedFilters.orderStatus, forcedTableGroup, visibleFilters]);
   const tableGroupOptions = useMemo(() => {
     const groups = allowedTableGroups.length > 0
       ? allowedTableGroups
@@ -147,6 +145,10 @@ export function OrdersListWidget({ forcedOrderStatuses, forcedTableGroup }: Orde
       if (key === "assemblyStatusCodes") {
         return canonicalMultiCodesKey(patchValue as string[] | undefined)
           === canonicalMultiCodesKey(currentValue as string[] | undefined);
+      }
+      if (key === "actionStatusCodes") {
+        return canonicalMultiCodesKey(patchValue as ActionStatusCode[] | undefined)
+          === canonicalMultiCodesKey(currentValue as ActionStatusCode[] | undefined);
       }
       return patchValue === currentValue;
     };
@@ -351,7 +353,7 @@ export function OrdersListWidget({ forcedOrderStatuses, forcedTableGroup }: Orde
           tableGroup: effectiveState.tableGroup,
           city: effectiveState.city,
           paymentStatus: effectiveState.paymentStatus,
-          actionStatusCode: effectiveState.actionStatusCode,
+          actionStatusCodes: effectiveState.actionStatusCodes,
           stateStatusCodes: effectiveState.stateStatusCodes,
           assemblyStatusCodes: effectiveState.assemblyStatusCodes,
         }}

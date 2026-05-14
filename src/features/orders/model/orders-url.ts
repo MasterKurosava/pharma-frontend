@@ -18,7 +18,8 @@ export type OrdersFiltersState = {
   tableGroup?: OrderTableGroup;
   city?: string;
   paymentStatus?: PaymentStatusCode;
-  actionStatusCode?: ActionStatusCode;
+  /** Коды статусов действия (мультивыбор; в URL — `orderStatuses`) */
+  actionStatusCodes?: ActionStatusCode[];
   /** Если задано, в списке только заказы с этими кодами статуса состояния */
   stateStatusCodes?: StateStatusCode[];
   /** Коды статусов сборки (мультивыбор) */
@@ -49,6 +50,14 @@ function parseDate(value: string | null): string | undefined {
   return value;
 }
 
+/** Параметр вида `a,b,c` из query string */
+function parseCsvSearchParam(value: string | null): string[] | undefined {
+  const joined = value?.trim();
+  if (!joined) return undefined;
+  const codes = joined.split(",").map((s) => s.trim()).filter(Boolean);
+  return codes.length ? codes : undefined;
+}
+
 export function canonicalMultiCodesKey(codes: readonly string[] | undefined): string {
   if (!codes?.length) return "";
   return [...codes].map(String).sort().join("\u0000");
@@ -58,19 +67,20 @@ export function canonicalStateStatusCodesKey(codes: StateStatusCode[] | undefine
   return canonicalMultiCodesKey(codes);
 }
 
+function parseActionStatusCodes(searchParams: URLSearchParams): ActionStatusCode[] | undefined {
+  const fromMulti = parseCsvSearchParam(searchParams.get("orderStatuses"));
+  if (fromMulti) return fromMulti as ActionStatusCode[];
+  const legacy = searchParams.get("actionStatusCode")?.trim();
+  return legacy ? ([legacy] as ActionStatusCode[]) : undefined;
+}
+
 function parseAssemblyStatusCodes(searchParams: URLSearchParams): string[] | undefined {
-  const joined = searchParams.get("assemblyStatuses")?.trim();
-  if (!joined) return undefined;
-  const codes = joined.split(",").map((s) => s.trim()).filter(Boolean);
-  return codes.length ? codes : undefined;
+  return parseCsvSearchParam(searchParams.get("assemblyStatuses"));
 }
 
 function parseStateStatusCodes(searchParams: URLSearchParams): StateStatusCode[] | undefined {
-  const joined = searchParams.get("stateStatuses")?.trim();
-  if (joined) {
-    const codes = joined.split(",").map((s) => s.trim()).filter(Boolean) as StateStatusCode[];
-    return codes.length ? codes : undefined;
-  }
+  const fromMulti = parseCsvSearchParam(searchParams.get("stateStatuses"));
+  if (fromMulti) return fromMulti as StateStatusCode[];
   const legacy = searchParams.get("stateStatusCode")?.trim();
   return legacy ? ([legacy] as StateStatusCode[]) : undefined;
 }
@@ -107,7 +117,7 @@ export function parseOrdersSearchParams(searchParams: URLSearchParams): OrdersLi
     tableGroup: (searchParams.get("tableGroup") as OrderTableGroup | null) ?? undefined,
     city: searchParams.get("city")?.trim() ? searchParams.get("city")!.trim() : undefined,
     paymentStatus: (searchParams.get("paymentStatus") as PaymentStatusCode | null) ?? undefined,
-    actionStatusCode: (searchParams.get("actionStatusCode") as ActionStatusCode | null) ?? undefined,
+    actionStatusCodes: parseActionStatusCodes(searchParams),
     stateStatusCodes: parseStateStatusCodes(searchParams),
     assemblyStatusCodes: parseAssemblyStatusCodes(searchParams),
     storagePlaceId: parseIntOrUndefined(searchParams.get("storagePlaceId")),
@@ -135,7 +145,7 @@ export function serializeOrdersSearchParams(state: OrdersListUrlState): URLSearc
   if (state.tableGroup) sp.set("tableGroup", state.tableGroup);
   if (state.city) sp.set("city", state.city);
   if (state.paymentStatus) sp.set("paymentStatus", state.paymentStatus);
-  if (state.actionStatusCode) sp.set("actionStatusCode", state.actionStatusCode);
+  if (state.actionStatusCodes?.length) sp.set("orderStatuses", state.actionStatusCodes.join(","));
   if (state.stateStatusCodes?.length) sp.set("stateStatuses", state.stateStatusCodes.join(","));
   if (state.assemblyStatusCodes?.length) sp.set("assemblyStatuses", state.assemblyStatusCodes.join(","));
   if (state.storagePlaceId) sp.set("storagePlaceId", String(state.storagePlaceId));

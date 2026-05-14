@@ -1,16 +1,15 @@
 import { PageContainer } from "@/shared/ui/page-container";
 import { OrdersListWidget } from "@/widgets/orders/orders-list-widget";
-import type { ActionStatusCode, OrderTableGroup } from "@/shared/config/order-static";
+import type { OrderTableGroup } from "@/shared/config/order-static";
 
 type OrdersPageProps = {
-  forcedOrderStatuses?: ActionStatusCode[];
   forcedTableGroup?: OrderTableGroup;
 };
 
-export function OrdersPage({ forcedOrderStatuses, forcedTableGroup }: OrdersPageProps) {
+export function OrdersPage({ forcedTableGroup }: OrdersPageProps) {
   return (
     <PageContainer>
-      <OrdersListWidget forcedOrderStatuses={forcedOrderStatuses} forcedTableGroup={forcedTableGroup} />
+      <OrdersListWidget forcedTableGroup={forcedTableGroup} />
     </PageContainer>
   );
 }

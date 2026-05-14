@@ -52,7 +52,6 @@ export const appRouter = createBrowserRouter([
           { path: "products", element: <ProductsPage /> },
           { path: "manufacturers", element: <ManufacturersPage /> },
           { path: "active-substances", element: <ActiveSubstancesPage /> },
-          { path: "order-statuses", element: <ActionOrderStatusesPage /> },
           { path: "order-statuses-action", element: <ActionOrderStatusesPage /> },
           { path: "order-statuses-state", element: <StateOrderStatusesPage /> },
           { path: "users", element: <UsersPage /> },

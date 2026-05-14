@@ -19,8 +19,8 @@ export const ORDER_FILTERS_CONFIG = [
   { key: "search", label: "Поиск" },
   { key: "tableGroup", label: "Группа" },
   { key: "city", label: "Город" },
-  { key: "paymentStatus", label: "Статус оплаты" },
   { key: "orderStatus", label: "Статус действия" },
   { key: "stateStatuses", label: "Статус состояния" },
   { key: "assemblyStatuses", label: "Статус сборки" },
+  { key: "paymentStatus", label: "Статус оплаты" },
 ] as const;

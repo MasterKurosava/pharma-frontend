@@ -14,7 +14,7 @@ export async function getOrders(params: OrdersListParams): Promise<OrdersListRes
   const { actionStatusCodes, stateStatusCodes, assemblyStatusCodes, ...rest } = params;
   const normalizedParams = {
     ...rest,
-    actionStatusCodes: actionStatusCodes?.length ? actionStatusCodes.join(",") : undefined,
+    orderStatuses: actionStatusCodes?.length ? actionStatusCodes.join(",") : undefined,
     stateStatuses: stateStatusCodes?.length ? stateStatusCodes.join(",") : undefined,
     assemblyStatuses: assemblyStatusCodes?.length ? assemblyStatusCodes.join(",") : undefined,
   };

@@ -10,6 +10,7 @@ import type { ActionStatusCode, OrderTableGroup, PaymentStatusCode, StateStatusC
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Search } from "lucide-react";
 
+import { useClickOutside } from "@/shared/lib/use-click-outside";
 import { useDebouncedValue } from "@/shared/lib/use-debounced-value";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
@@ -24,7 +25,7 @@ type OrdersFiltersBarProps = {
     | "tableGroup"
     | "city"
     | "paymentStatus"
-    | "actionStatusCode"
+    | "actionStatusCodes"
     | "stateStatusCodes"
     | "assemblyStatusCodes"
   >;
@@ -58,16 +59,7 @@ function CheckboxMultiDropdown({
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    const onPointerDown = (event: MouseEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", onPointerDown);
-    return () => document.removeEventListener("mousedown", onPointerDown);
-  }, [open]);
+  useClickOutside(rootRef, open, () => setOpen(false));
 
   const labelByCode = useMemo(() => new Map(options.map((o) => [o.value, o.label])), [options]);
 
@@ -166,9 +158,9 @@ export function OrdersFiltersBar({
   const [tableGroupDraft, setTableGroupDraft] = useState(state.tableGroup ?? "");
   const [cityDraft, setCityDraft] = useState(state.city ?? "");
   const [paymentStatusDraft, setPaymentStatusDraft] = useState(state.paymentStatus ?? "");
+  const [actionStatusCodesDraft, setActionStatusCodesDraft] = useState<ActionStatusCode[]>(state.actionStatusCodes ?? []);
   const [stateStatusCodesDraft, setStateStatusCodesDraft] = useState<StateStatusCode[]>(state.stateStatusCodes ?? []);
   const [assemblyStatusCodesDraft, setAssemblyStatusCodesDraft] = useState<string[]>(state.assemblyStatusCodes ?? []);
-  const [actionStatusDraft, setActionStatusDraft] = useState(state.actionStatusCode ?? "");
 
   const debouncedInput = useMemo(
     () => ({
@@ -176,11 +168,19 @@ export function OrdersFiltersBar({
       tableGroup: tableGroupDraft,
       city: cityDraft,
       paymentStatus: paymentStatusDraft,
+      actionStatusCodes: actionStatusCodesDraft,
       stateStatusCodes: stateStatusCodesDraft,
       assemblyStatusCodes: assemblyStatusCodesDraft,
-      actionStatusCode: actionStatusDraft,
     }),
-    [searchDraft, tableGroupDraft, cityDraft, paymentStatusDraft, stateStatusCodesDraft, assemblyStatusCodesDraft, actionStatusDraft],
+    [
+      searchDraft,
+      tableGroupDraft,
+      cityDraft,
+      paymentStatusDraft,
+      actionStatusCodesDraft,
+      stateStatusCodesDraft,
+      assemblyStatusCodesDraft,
+    ],
   );
 
   const debouncedDrafts = useDebouncedValue(debouncedInput, 350);
@@ -192,8 +192,12 @@ export function OrdersFiltersBar({
     setTableGroupDraft(state.tableGroup ?? "");
     setCityDraft(state.city ?? "");
     setPaymentStatusDraft(state.paymentStatus ?? "");
-    setActionStatusDraft(state.actionStatusCode ?? "");
-  }, [state.actionStatusCode, state.city, state.paymentStatus, state.search, state.tableGroup]);
+  }, [state.city, state.paymentStatus, state.search, state.tableGroup]);
+
+  const actionCodesUrlKey = canonicalMultiCodesKey(state.actionStatusCodes);
+  useEffect(() => {
+    setActionStatusCodesDraft(state.actionStatusCodes ?? []);
+  }, [actionCodesUrlKey]);
 
   const stateCodesUrlKey = canonicalStateStatusCodesKey(state.stateStatusCodes);
   useEffect(() => {
@@ -211,9 +215,9 @@ export function OrdersFiltersBar({
       tableGroup: (debouncedDrafts.tableGroup || undefined) as OrderTableGroup | undefined,
       city: debouncedDrafts.city.trim() || undefined,
       paymentStatus: (debouncedDrafts.paymentStatus || undefined) as PaymentStatusCode | undefined,
+      actionStatusCodes: debouncedDrafts.actionStatusCodes.length ? debouncedDrafts.actionStatusCodes : undefined,
       stateStatusCodes: debouncedDrafts.stateStatusCodes.length ? debouncedDrafts.stateStatusCodes : undefined,
       assemblyStatusCodes: debouncedDrafts.assemblyStatusCodes.length ? debouncedDrafts.assemblyStatusCodes : undefined,
-      actionStatusCode: (debouncedDrafts.actionStatusCode || undefined) as ActionStatusCode | undefined,
     });
   }, [debouncedDrafts, onChange]);
 
@@ -262,15 +266,15 @@ export function OrdersFiltersBar({
             </div>
           ) : null}
 
-          {isVisible("paymentStatus") ? (
-            <div className="w-full sm:w-[190px]">
+          {isVisible("orderStatus") ? (
+            <div className="w-full min-w-0 sm:min-w-[220px] sm:max-w-[260px]">
               <div className="space-y-1">
-                <p className="px-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Статус оплаты</p>
-                <NativeSelect
-                  value={paymentStatusDraft}
-                  options={[{ value: "", label: "Любой статус оплаты" }, ...paymentStatusOptions]}
-                  onValueChange={(next) => setPaymentStatusDraft(String(next || ""))}
-                  placeholder=""
+                <p className="px-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Статус действия</p>
+                <CheckboxMultiDropdown
+                  options={actionStatusOptions}
+                  value={actionStatusCodesDraft}
+                  onValueChange={(next) => setActionStatusCodesDraft(next as ActionStatusCode[])}
+                  emptySummaryLabel="Любой статус действия"
                 />
               </div>
             </div>
@@ -304,16 +308,15 @@ export function OrdersFiltersBar({
             </div>
           ) : null}
 
-          {isVisible("orderStatus") ? (
+          {isVisible("paymentStatus") ? (
             <div className="w-full sm:w-[190px]">
               <div className="space-y-1">
-                <p className="px-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Статус действия</p>
+                <p className="px-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Статус оплаты</p>
                 <NativeSelect
-                  value={actionStatusDraft}
-                  options={[{ value: "", label: "Любой статус действия" }, ...actionStatusOptions]}
-                  onValueChange={(next) => setActionStatusDraft(String(next || ""))}
+                  value={paymentStatusDraft}
+                  options={[{ value: "", label: "Любой статус оплаты" }, ...paymentStatusOptions]}
+                  onValueChange={(next) => setPaymentStatusDraft(String(next || ""))}
                   placeholder=""
-                  disabled={fixedFilters?.orderStatus !== undefined}
                 />
               </div>
             </div>

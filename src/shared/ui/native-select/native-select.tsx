@@ -1,6 +1,7 @@
 import { Check, ChevronDown, Search, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type SelectHTMLAttributes } from "react";
+import { useMemo, useRef, useState, type SelectHTMLAttributes } from "react";
 
+import { useClickOutside } from "@/shared/lib/use-click-outside";
 import { cn } from "@/shared/lib/utils";
 
 export type NativeSelectOption<T extends string | number> = {
@@ -32,19 +33,7 @@ export function NativeSelect<T extends string | number>({
   const [search, setSearch] = useState("");
   const rootRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => {
-    if (!open) return;
-
-    const onPointerDown = (event: MouseEvent) => {
-      if (!rootRef.current) return;
-      if (!rootRef.current.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", onPointerDown);
-    return () => document.removeEventListener("mousedown", onPointerDown);
-  }, [open]);
+  useClickOutside(rootRef, open, () => setOpen(false));
 
   const normalizedPlaceholder =
     typeof placeholder === "string" && placeholder.trim().length > 0 ? placeholder : "Выберите значение";
