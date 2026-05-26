@@ -26,6 +26,9 @@ type StatusFormState = {
   name: string;
   color: string;
   tableGroups: OrderTableGroup[];
+  reserveOnSet: boolean;
+  writeOffOnSet: boolean;
+  setAssemblyDateOnSet: boolean;
   sortOrder: number;
   isActive: boolean;
 };
@@ -34,6 +37,9 @@ const emptyForm: StatusFormState = {
   name: "",
   color: "",
   tableGroups: [],
+  reserveOnSet: false,
+  writeOffOnSet: false,
+  setAssemblyDateOnSet: false,
   sortOrder: 0,
   isActive: true,
 };
@@ -61,6 +67,9 @@ export function OrderStatusesManagementSection({ type, title, emptyDescription }
       name: status.name,
       color: status.color ?? "",
       tableGroups: status.tableGroups ?? [],
+      reserveOnSet: status.reserveOnSet,
+      writeOffOnSet: status.writeOffOnSet,
+      setAssemblyDateOnSet: status.setAssemblyDateOnSet,
       sortOrder: status.sortOrder,
       isActive: status.isActive,
     });
@@ -69,10 +78,14 @@ export function OrderStatusesManagementSection({ type, title, emptyDescription }
 
   const submit = async () => {
     if (!editingStatus) return;
+    const isState = type === "STATE";
     const dto: UpdateOrderStatusConfigDto = {
       name: form.name.trim(),
       color: form.color.trim() || null,
-      tableGroups: type === "STATE" ? form.tableGroups : undefined,
+      tableGroups: isState ? form.tableGroups : undefined,
+      reserveOnSet: isState ? form.reserveOnSet : undefined,
+      writeOffOnSet: isState ? form.writeOffOnSet : undefined,
+      setAssemblyDateOnSet: isState ? form.setAssemblyDateOnSet : undefined,
       sortOrder: form.sortOrder,
       isActive: form.isActive,
     };
@@ -103,6 +116,22 @@ export function OrderStatusesManagementSection({ type, title, emptyDescription }
             header: "Таблица(ы)",
             cell: (row: OrderStatusConfigItem) =>
               row.tableGroups?.length ? row.tableGroups.map((g) => ORDER_TABLE_GROUP_LABELS[g]).join(", ") : "—",
+          },
+          {
+            id: "flags",
+            header: "Действия при установке",
+            cell: (row: OrderStatusConfigItem) => {
+              const flags = [
+                row.reserveOnSet ? "Резерв" : null,
+                row.writeOffOnSet ? "Списание" : null,
+                row.setAssemblyDateOnSet ? "Дата сборки" : null,
+              ].filter(Boolean);
+              return flags.length ? (
+                <span className="text-xs">{flags.join(", ")}</span>
+              ) : (
+                <span className="text-xs text-muted-foreground">—</span>
+              );
+            },
           },
         ] satisfies Array<DataTableColumn<OrderStatusConfigItem>>)
       : []),
@@ -183,6 +212,37 @@ export function OrderStatusesManagementSection({ type, title, emptyDescription }
                     </label>
                   );
                 })}
+              </div>
+            </div>
+          ) : null}
+          {type === "STATE" ? (
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Действия при установке статуса</label>
+              <div className="flex flex-col gap-2 rounded-xl border bg-card p-3">
+                <label className="inline-flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={form.reserveOnSet}
+                    onChange={(e) => setForm((p) => ({ ...p, reserveOnSet: e.target.checked }))}
+                  />
+                  Резервировать товар
+                </label>
+                <label className="inline-flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={form.writeOffOnSet}
+                    onChange={(e) => setForm((p) => ({ ...p, writeOffOnSet: e.target.checked }))}
+                  />
+                  Списывать товар со склада
+                </label>
+                <label className="inline-flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={form.setAssemblyDateOnSet}
+                    onChange={(e) => setForm((p) => ({ ...p, setAssemblyDateOnSet: e.target.checked }))}
+                  />
+                  Проставлять дату сборки
+                </label>
               </div>
             </div>
           ) : null}
